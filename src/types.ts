@@ -2,7 +2,7 @@ export type FileCategory = 'image' | 'document' | 'audio' | 'video';
 
 export type TargetFormat = 
   // Image formats
-  | 'jpeg' | 'png' | 'webp' | 'pdf' | 'bmp' | 'gif' | 'ico' | 'svg'
+  | 'jpeg' | 'png' | 'webp' | 'avif' | 'pdf' | 'bmp' | 'gif' | 'ico' | 'svg'
   // Text & Document formats
   | 'txt' | 'md' | 'html' | 'json' | 'csv'
   // Audio formats
