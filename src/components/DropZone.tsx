@@ -130,142 +130,144 @@ export const DropZone: React.FC<DropZoneProps> = ({
         })}
       </div>
 
-      {/* Drop Zone Box (For file-based categories) */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
-        className={`relative cursor-pointer group rounded-[32px] border transition-all duration-300 overflow-hidden backdrop-blur-3xl ${
-          isDragOver
-            ? isDarkTheme
-              ? 'border-sky-300 bg-blue-500/25 ring-4 ring-blue-400/30 scale-[1.005] shadow-[0_25px_60px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.5)]'
-              : 'border-blue-500 bg-blue-50/90 ring-4 ring-blue-300/50 scale-[1.005] shadow-xl'
-            : isDarkTheme
-            ? hasFiles
-              ? 'border-white/20 bg-white/[0.07] hover:border-sky-300/60 hover:bg-white/[0.12] py-6 px-6 shadow-[0_15px_40px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.35)]'
-              : 'border-white/20 bg-white/[0.07] hover:border-sky-300/60 hover:bg-white/[0.12] py-10 px-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.35)]'
-            : hasFiles
-            ? 'border-slate-200/90 bg-white/80 hover:border-blue-400 hover:bg-white py-6 px-6 shadow-md shadow-slate-200/50'
-            : 'border-slate-200/90 bg-white/80 hover:border-blue-400 hover:bg-white py-10 px-6 shadow-lg shadow-slate-200/60'
-        }`}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept="image/*,audio/*,video/*,text/*,.heic,.heif,.cr2,.cr3,.nef,.nrw,.arw,.dng,.orf,.rw2,.raf,.pef,.raw,.pdf,.txt,.md,.json,.csv,.html,.rtf,.mp3,.wav,.ogg,.m4a,.mp4,.webm,.mov,.avi"
-          onChange={handleFileInputChange}
-          className="hidden"
-        />
+      {/* Drop Zone Box (Only for file-based categories) */}
+      {activeTab !== 'units' && (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className={`relative cursor-pointer group rounded-[32px] border transition-all duration-300 overflow-hidden backdrop-blur-3xl ${
+            isDragOver
+              ? isDarkTheme
+                ? 'border-sky-300 bg-blue-500/25 ring-4 ring-blue-400/30 scale-[1.005] shadow-[0_25px_60px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.5)]'
+                : 'border-blue-500 bg-blue-50/90 ring-4 ring-blue-300/50 scale-[1.005] shadow-xl'
+              : isDarkTheme
+              ? hasFiles
+                ? 'border-white/20 bg-white/[0.07] hover:border-sky-300/60 hover:bg-white/[0.12] py-6 px-6 shadow-[0_15px_40px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.35)]'
+                : 'border-white/20 bg-white/[0.07] hover:border-sky-300/60 hover:bg-white/[0.12] py-10 px-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.35)]'
+              : hasFiles
+              ? 'border-slate-200/90 bg-white/80 hover:border-blue-400 hover:bg-white py-6 px-6 shadow-md shadow-slate-200/50'
+              : 'border-slate-200/90 bg-white/80 hover:border-blue-400 hover:bg-white py-10 px-6 shadow-lg shadow-slate-200/60'
+          }`}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,audio/*,video/*,text/*,.heic,.heif,.cr2,.cr3,.nef,.nrw,.arw,.dng,.orf,.rw2,.raf,.pef,.raw,.pdf,.txt,.md,.json,.csv,.html,.rtf,.mp3,.wav,.ogg,.m4a,.mp4,.webm,.mov,.avi"
+            onChange={handleFileInputChange}
+            className="hidden"
+          />
 
-        <div className="flex flex-col items-center justify-center text-center">
-          {/* Animated Icon Circle */}
-          <div
-            className={`w-16 h-16 sm:w-20 sm:h-20 rounded-[24px] flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-105 shadow-lg ${
-              isDragOver
-                ? 'bg-gradient-to-br from-blue-500 to-sky-400 text-white shadow-blue-500/40 border border-white/40'
-                : isDarkTheme
-                ? 'bg-white/10 text-sky-300 border border-white/25 group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-sky-400 group-hover:text-white group-hover:border-white/40 shadow-blue-500/20 backdrop-blur-2xl'
-                : 'bg-blue-50 text-blue-600 border border-blue-200 group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-sky-500 group-hover:text-white group-hover:border-blue-300 shadow-blue-200/50'
-            }`}
-          >
-            <UploadCloud className="w-8 h-8 sm:w-10 sm:h-10" />
-          </div>
-
-          <h3
-            className={`text-lg sm:text-xl font-bold mb-2 tracking-tight ${
-              isDarkTheme ? 'text-white drop-shadow-sm' : 'text-slate-900'
-            }`}
-          >
-            {isDragOver
-              ? 'Відпустіть файли для завантаження'
-              : activeTab === 'photo'
-              ? 'Завантажте фото (HEIC, RAW CR2/NEF/ARW, JPG, PNG, WEBP)'
-              : activeTab === 'text'
-              ? 'Завантажте документы (PDF, TXT, MD, JSON, CSV)'
-              : activeTab === 'video'
-              ? 'Завантажте відео чи аудіо (MP4, WEBM, MP3, WAV, OGG)'
-              : 'Завантажте файли будь-якого формату для конвертації'}
-          </h3>
-
-          <p
-            className={`text-xs sm:text-sm max-w-md mb-4 ${
-              isDarkTheme ? 'text-slate-200/90' : 'text-slate-600'
-            }`}
-          >
-            Натисніть для вибору файлів або вставте з буферу обміну (
-            <span
-              className={`font-mono text-xs px-2.5 py-0.5 rounded-full border ${
-                isDarkTheme
-                  ? 'bg-black/30 text-sky-300 border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
-                  : 'bg-slate-100 text-blue-700 border-slate-300 font-bold'
+          <div className="flex flex-col items-center justify-center text-center">
+            {/* Animated Icon Circle */}
+            <div
+              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-[24px] flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-105 shadow-lg ${
+                isDragOver
+                  ? 'bg-gradient-to-br from-blue-500 to-sky-400 text-white shadow-blue-500/40 border border-white/40'
+                  : isDarkTheme
+                  ? 'bg-white/10 text-sky-300 border border-white/25 group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-sky-400 group-hover:text-white group-hover:border-white/40 shadow-blue-500/20 backdrop-blur-2xl'
+                  : 'bg-blue-50 text-blue-600 border border-blue-200 group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-sky-500 group-hover:text-white group-hover:border-blue-300 shadow-blue-200/50'
               }`}
             >
-              Ctrl+V
-            </span>
-            )
-          </p>
+              <UploadCloud className="w-8 h-8 sm:w-10 sm:h-10" />
+            </div>
 
-          {/* Formats Tags */}
-          <div className="flex flex-wrap items-center justify-center gap-1.5 mb-5">
-            {(activeTab === 'photo'
-              ? ['HEIC', 'CR2', 'NEF', 'ARW', 'DNG', 'JPG', 'PNG', 'WEBP', 'PDF']
-              : activeTab === 'text'
-              ? ['PDF', 'TXT', 'MD', 'JSON', 'CSV', 'HTML', 'RTF']
-              : activeTab === 'video'
-              ? ['MP4', 'WEBM', 'MP3', 'WAV', 'OGG', 'M4A']
-              : ['HEIC', 'RAW', 'PDF', 'TXT', 'MP3', 'MP4']
-            ).map((fmt) => (
+            <h3
+              className={`text-lg sm:text-xl font-bold mb-2 tracking-tight ${
+                isDarkTheme ? 'text-white drop-shadow-sm' : 'text-slate-900'
+              }`}
+            >
+              {isDragOver
+                ? 'Відпустіть файли для завантаження'
+                : activeTab === 'photo'
+                ? 'Завантажте фото (HEIC, RAW CR2/NEF/ARW, JPG, PNG, WEBP)'
+                : activeTab === 'text'
+                ? 'Завантажте документы (PDF, TXT, MD, JSON, CSV)'
+                : activeTab === 'video'
+                ? 'Завантажте відео чи аудіо (MP4, WEBM, MP3, WAV, OGG)'
+                : 'Завантажте файли будь-якого формату для конвертації'}
+            </h3>
+
+            <p
+              className={`text-xs sm:text-sm max-w-md mb-4 ${
+                isDarkTheme ? 'text-slate-200/90' : 'text-slate-600'
+              }`}
+            >
+              Натисніть для вибору файлів або вставте з буферу обміну (
               <span
-                key={fmt}
-                className={`text-[11px] font-bold px-3 py-1 rounded-full border transition-all ${
+                className={`font-mono text-xs px-2.5 py-0.5 rounded-full border ${
                   isDarkTheme
-                    ? 'bg-blue-500/25 text-sky-200 border-blue-300/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]'
-                    : 'bg-blue-50 text-blue-800 border-blue-200 font-extrabold shadow-xs'
+                    ? 'bg-black/30 text-sky-300 border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
+                    : 'bg-slate-100 text-blue-700 border-slate-300 font-bold'
                 }`}
               >
-                .{fmt.toLowerCase()}
+                Ctrl+V
               </span>
-            ))}
-          </div>
+              )
+            </p>
 
-          {/* Buttons */}
-          <div
-            className="flex flex-wrap items-center justify-center gap-3"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-2 px-6 py-2.5 text-xs sm:text-sm font-bold text-white bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-95 rounded-full shadow-[0_10px_25px_-5px_rgba(37,99,235,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)] transition-all border border-blue-300/40"
+            {/* Formats Tags */}
+            <div className="flex flex-wrap items-center justify-center gap-1.5 mb-5">
+              {(activeTab === 'photo'
+                ? ['HEIC', 'CR2', 'NEF', 'ARW', 'DNG', 'JPG', 'PNG', 'WEBP', 'PDF']
+                : activeTab === 'text'
+                ? ['PDF', 'TXT', 'MD', 'JSON', 'CSV', 'HTML', 'RTF']
+                : activeTab === 'video'
+                ? ['MP4', 'WEBM', 'MP3', 'WAV', 'OGG', 'M4A']
+                : ['HEIC', 'RAW', 'PDF', 'TXT', 'MP3', 'MP4']
+              ).map((fmt) => (
+                <span
+                  key={fmt}
+                  className={`text-[11px] font-bold px-3 py-1 rounded-full border transition-all ${
+                    isDarkTheme
+                      ? 'bg-blue-500/25 text-sky-200 border-blue-300/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]'
+                      : 'bg-blue-50 text-blue-800 border-blue-200 font-extrabold shadow-xs'
+                  }`}
+                >
+                  .{fmt.toLowerCase()}
+                </span>
+              ))}
+            </div>
+
+            {/* Buttons */}
+            <div
+              className="flex flex-wrap items-center justify-center gap-3"
+              onClick={(e) => e.stopPropagation()}
             >
-              <FolderPlus className="w-4 h-4" />
-              Вибрати файли
-            </button>
-
-            {!hasFiles && (
               <button
                 type="button"
-                onClick={onAddDemoFiles}
-                disabled={isProcessingDemo}
-                className={`inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold active:scale-95 rounded-full border transition-all disabled:opacity-50 ${
-                  isDarkTheme
-                    ? 'text-slate-100 bg-white/10 hover:bg-white/20 border-white/20 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]'
-                    : 'text-slate-700 bg-slate-100 hover:bg-slate-200 border-slate-300 shadow-sm'
-                }`}
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-2 px-6 py-2.5 text-xs sm:text-sm font-bold text-white bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-95 rounded-full shadow-[0_10px_25px_-5px_rgba(37,99,235,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)] transition-all border border-blue-300/40"
               >
-                <Sparkles
-                  className={`w-4 h-4 ${
-                    isDarkTheme ? 'text-sky-300' : 'text-blue-600'
-                  }`}
-                />
-                {isProcessingDemo ? 'Створення...' : 'Спробувати тестові файли'}
+                <FolderPlus className="w-4 h-4" />
+                Вибрати файли
               </button>
-            )}
+
+              {!hasFiles && (
+                <button
+                  type="button"
+                  onClick={onAddDemoFiles}
+                  disabled={isProcessingDemo}
+                  className={`inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold active:scale-95 rounded-full border transition-all disabled:opacity-50 ${
+                    isDarkTheme
+                      ? 'text-slate-100 bg-white/10 hover:bg-white/20 border-white/20 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]'
+                      : 'text-slate-700 bg-slate-100 hover:bg-slate-200 border-slate-300 shadow-sm'
+                  }`}
+                >
+                  <Sparkles
+                    className={`w-4 h-4 ${
+                      isDarkTheme ? 'text-sky-300' : 'text-blue-600'
+                    }`}
+                  />
+                  {isProcessingDemo ? 'Створення...' : 'Спробувати тестові файли'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
