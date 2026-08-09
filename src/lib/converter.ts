@@ -1,19 +1,22 @@
+import type heic2any from 'heic2any';
+import type { jsPDF } from 'jspdf';
+import type JSZip from 'jszip';
 import { ConversionSettings, FileCategory, FileItem, FormatOption, TargetFormat } from '../types';
 
 // Lazy dynamic importers to keep initial bundle size lightweight (~10x faster load)
 async function getHeic2Any() {
   const module = await import('heic2any');
-  return module.default || module;
+  return (module.default || module) as typeof heic2any;
 }
 
 async function getJsPDF() {
   const module = await import('jspdf');
-  return module.jsPDF || module.default || module;
+  return (module.jsPDF || module.default || module) as typeof jsPDF;
 }
 
 async function getJSZip() {
   const module = await import('jszip');
-  return module.default || module;
+  return (module.default || module) as unknown as typeof JSZip;
 }
 
 export const SUPPORTED_FORMATS: FormatOption[] = [
