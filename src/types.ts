@@ -15,6 +15,15 @@ export interface ConversionSettings {
 
 export type FileStatus = 'idle' | 'heic_decoding' | 'converting' | 'completed' | 'error';
 
+export interface ImageAdjustments {
+  brightness: number; // default 100
+  contrast: number;   // default 100
+  grayscale: number;  // default 0
+  saturation: number; // default 100
+  sepia: number;      // default 0
+  blur: number;       // default 0
+}
+
 export interface FileItem {
   id: string;
   file: File;
@@ -27,6 +36,9 @@ export interface FileItem {
   progress: number; // 0 to 100
   errorMessage?: string;
   
+  // Custom filter adjustments per file
+  adjustments?: ImageAdjustments;
+
   // Output result
   outputBlob?: Blob;
   outputUrl?: string;

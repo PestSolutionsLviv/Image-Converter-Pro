@@ -10,6 +10,7 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
+  Sliders,
 } from 'lucide-react';
 import { FileItem, TargetFormat } from '../types';
 import { formatBytes, saveBlobAsFile, SUPPORTED_FORMATS } from '../lib/converter';
@@ -21,6 +22,7 @@ interface FileCardProps {
   onRemove: (id: string) => void;
   onCompare: (item: FileItem) => void;
   onFormatChange: (id: string, format: TargetFormat) => void;
+  onOpenAdjustments?: (item: FileItem) => void;
   onMoveUp?: (index: number) => void;
   onMoveDown?: (index: number) => void;
   onDragStart?: (e: React.DragEvent, index: number) => void;
@@ -38,6 +40,7 @@ export const FileCard: React.FC<FileCardProps> = ({
   onRemove,
   onCompare,
   onFormatChange,
+  onOpenAdjustments,
   onMoveUp,
   onMoveDown,
   onDragStart,
@@ -49,6 +52,15 @@ export const FileCard: React.FC<FileCardProps> = ({
 }) => {
   const isHeic =
     item.originalFormat === 'heic' || item.originalFormat === 'heif';
+
+  const hasAdjustments =
+    item.adjustments &&
+    (item.adjustments.brightness !== 100 ||
+      item.adjustments.contrast !== 100 ||
+      item.adjustments.grayscale !== 0 ||
+      item.adjustments.saturation !== 100 ||
+      item.adjustments.sepia !== 0 ||
+      item.adjustments.blur !== 0);
 
   const formatInfo = SUPPORTED_FORMATS.find(
     (f) => f.id === (item.outputFormat || item.customSettings?.targetFormat || 'jpeg')
@@ -239,6 +251,22 @@ export const FileCard: React.FC<FileCardProps> = ({
           {/* Action buttons */}
           <div className="flex items-center gap-1">
             
+            <button
+              type="button"
+              onClick={() => onOpenAdjustments?.(item)}
+              className={`p-2 rounded-xl transition-all relative ${
+                hasAdjustments
+                  ? 'text-blue-400 bg-blue-500/20 border border-blue-400/40 hover:bg-blue-500/30'
+                  : 'text-slate-300 hover:text-blue-400 hover:bg-white/10'
+              }`}
+              title="Корекція зображення (яскравість, контраст, ч/б, сепія)"
+            >
+              <Sliders className="w-4 h-4" />
+              {hasAdjustments && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-400 rounded-full ring-2 ring-slate-900" />
+              )}
+            </button>
+
             {item.status === 'completed' && item.outputUrl && (
               <>
                 <button

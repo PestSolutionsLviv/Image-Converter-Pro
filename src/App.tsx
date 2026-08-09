@@ -11,12 +11,15 @@ import { FileCard } from './components/FileCard';
 import { BatchActions } from './components/BatchActions';
 import { CompareModal } from './components/CompareModal';
 import { BatchRenameModal } from './components/BatchRenameModal';
+import { ImageAdjustmentModal } from './components/ImageAdjustmentModal';
+import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { PrivacyInfo } from './components/PrivacyInfo';
 
 import {
   ConversionSettings,
   FileItem,
   TargetFormat,
+  ImageAdjustments,
 } from './types';
 import {
   convertSingleImage,
@@ -34,6 +37,8 @@ export default function App() {
   const [isProcessingDemo, setIsProcessingDemo] = useState(false);
   const [compareItem, setCompareItem] = useState<FileItem | null>(null);
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+  const [adjustingItem, setAdjustingItem] = useState<FileItem | null>(null);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
 
   // Drag and drop reordering state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -182,7 +187,7 @@ export default function App() {
   };
 
   // Convert all items in queue
-  const handleConvertAll = async () => {
+  const handleConvertAll = useCallback(async () => {
     if (items.length === 0 || isProcessing) return;
 
     setIsProcessing(true);
@@ -205,7 +210,7 @@ export default function App() {
     }
 
     setIsProcessing(false);
-  };
+  }, [items, isProcessing, globalSettings]);
 
   // Individual format override change
   const handleFormatChange = (id: string, format: TargetFormat) => {
@@ -236,18 +241,18 @@ export default function App() {
   };
 
   // Clear all items
-  const handleClearAll = () => {
+  const handleClearAll = useCallback(() => {
     items.forEach((item) => {
       if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
       if (item.outputUrl) URL.revokeObjectURL(item.outputUrl);
     });
     setItems([]);
-  };
+  }, [items]);
 
   // Download ZIP
-  const handleDownloadZip = () => {
+  const handleDownloadZip = useCallback(() => {
     downloadAllAsZip(items, `heic_converted_${Date.now()}.zip`);
-  };
+  }, [items]);
 
   // Drag and drop reordering handlers
   const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
@@ -312,6 +317,124 @@ export default function App() {
     []
   );
 
+  const handleSaveAdjustments = useCallback(
+    async (id: string, adjustments: ImageAdjustments) => {
+      let updatedItem: FileItem | undefined;
+
+      setItems((prev) => {
+        return prev.map((item) => {
+          if (item.id === id) {
+            updatedItem = { ...item, adjustments };
+            return updatedItem;
+          }
+          return item;
+        });
+      });
+
+      if (updatedItem) {
+        const processed = await processItem(updatedItem, globalSettings);
+        setItems((prev) =>
+          prev.map((item) => (item.id === id ? processed : item))
+        );
+      }
+    },
+    [globalSettings]
+  );
+
+  // Global Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore keybindings if user is actively typing in an input, textarea, or select
+      const target = e.target as HTMLElement;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        if (e.key === 'Escape') {
+          target.blur();
+        }
+        return;
+      }
+
+      // Ctrl + Enter or Cmd + Enter -> Convert all items
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (items.length > 0 && !isProcessing) {
+          handleConvertAll();
+        }
+        return;
+      }
+
+      // Ctrl + O or Cmd + O -> Open file picker
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'o' || e.key === 'O')) {
+        e.preventDefault();
+        const dropZoneInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+        if (dropZoneInput) {
+          dropZoneInput.click();
+        }
+        return;
+      }
+
+      // Shift + D -> Download ZIP
+      if (e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+        e.preventDefault();
+        if (items.some((i) => i.status === 'completed')) {
+          handleDownloadZip();
+        }
+        return;
+      }
+
+      // Shift + R -> Batch rename modal
+      if (e.shiftKey && (e.key === 'R' || e.key === 'r')) {
+        e.preventDefault();
+        if (items.length > 0) {
+          setIsRenameModalOpen(true);
+        }
+        return;
+      }
+
+      // Delete or Backspace -> Clear all items
+      if (e.key === 'Delete') {
+        if (items.length > 0) {
+          e.preventDefault();
+          handleClearAll();
+        }
+        return;
+      }
+
+      // Escape -> Close active modals
+      if (e.key === 'Escape') {
+        if (compareItem) setCompareItem(null);
+        if (isRenameModalOpen) setIsRenameModalOpen(false);
+        if (adjustingItem) setAdjustingItem(null);
+        if (isShortcutsModalOpen) setIsShortcutsModalOpen(false);
+        return;
+      }
+
+      // '?' key -> Toggle keyboard shortcuts modal
+      if (e.key === '?') {
+        e.preventDefault();
+        setIsShortcutsModalOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    items,
+    isProcessing,
+    compareItem,
+    isRenameModalOpen,
+    adjustingItem,
+    isShortcutsModalOpen,
+    handleConvertAll,
+    handleDownloadZip,
+    handleClearAll,
+  ]);
+
   return (
     <div className="min-h-screen bg-[#0f172a] text-slate-100 font-sans antialiased flex flex-col relative overflow-x-hidden">
       
@@ -329,6 +452,7 @@ export default function App() {
           onAddDemoFiles={handleAddDemoFiles}
           isProcessingDemo={isProcessingDemo}
           fileCount={items.length}
+          onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
         />
       </div>
 
@@ -398,6 +522,7 @@ export default function App() {
                   onRemove={handleRemove}
                   onCompare={setCompareItem}
                   onFormatChange={handleFormatChange}
+                  onOpenAdjustments={setAdjustingItem}
                   onMoveUp={(idx) => handleMoveItem(idx, idx - 1)}
                   onMoveDown={(idx) => handleMoveItem(idx, idx + 1)}
                   onDragStart={handleDragStart}
@@ -438,6 +563,20 @@ export default function App() {
         isOpen={isRenameModalOpen}
         onClose={() => setIsRenameModalOpen(false)}
         onApplyRename={handleApplyBatchRename}
+      />
+
+      {/* Image Adjustments Modal */}
+      <ImageAdjustmentModal
+        item={adjustingItem}
+        isOpen={!!adjustingItem}
+        onClose={() => setAdjustingItem(null)}
+        onSaveAdjustments={handleSaveAdjustments}
+      />
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal
+        isOpen={isShortcutsModalOpen}
+        onClose={() => setIsShortcutsModalOpen(false)}
       />
 
       {/* Footer */}

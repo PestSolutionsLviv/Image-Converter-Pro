@@ -1,16 +1,18 @@
 import React from 'react';
-import { ShieldCheck, Image, FileCode2, Sparkles, Lock, ArrowRightLeft } from 'lucide-react';
+import { ShieldCheck, Image, FileCode2, Sparkles, Lock, ArrowRightLeft, Keyboard } from 'lucide-react';
 
 interface HeaderProps {
   onAddDemoFiles: () => void;
   isProcessingDemo: boolean;
   fileCount: number;
+  onOpenShortcuts?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onAddDemoFiles,
   isProcessingDemo,
   fileCount,
+  onOpenShortcuts,
 }) => {
   return (
     <header className="bg-slate-900/60 backdrop-blur-2xl border-b border-white/10 sticky top-0 z-30 shadow-xl">
@@ -40,6 +42,20 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Action & Privacy Badge */}
           <div className="flex items-center gap-2.5">
+            {onOpenShortcuts && (
+              <button
+                onClick={onOpenShortcuts}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-200 bg-white/10 hover:bg-white/15 active:bg-white/20 rounded-xl transition-all border border-white/15 backdrop-blur-md"
+                title="Гарячі клавіші (натисніть ?)"
+              >
+                <Keyboard className="w-3.5 h-3.5 text-blue-400" />
+                <span className="hidden sm:inline">Клавіші</span>
+                <kbd className="px-1.5 py-0.5 text-[10px] bg-slate-950/80 rounded border border-white/20 text-blue-300 font-mono font-bold">
+                  ?
+                </kbd>
+              </button>
+            )}
+
             <button
               onClick={onAddDemoFiles}
               disabled={isProcessingDemo}

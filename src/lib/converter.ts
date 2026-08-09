@@ -234,6 +234,30 @@ export async function convertSingleImage(
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
+    // Apply image adjustments (filters) if configured
+    if (item.adjustments) {
+      const {
+        brightness = 100,
+        contrast = 100,
+        grayscale = 0,
+        saturation = 100,
+        sepia = 0,
+        blur = 0,
+      } = item.adjustments;
+
+      const filters: string[] = [];
+      if (brightness !== 100) filters.push(`brightness(${brightness}%)`);
+      if (contrast !== 100) filters.push(`contrast(${contrast}%)`);
+      if (grayscale > 0) filters.push(`grayscale(${grayscale}%)`);
+      if (saturation !== 100) filters.push(`saturate(${saturation}%)`);
+      if (sepia > 0) filters.push(`sepia(${sepia}%)`);
+      if (blur > 0) filters.push(`blur(${blur}px)`);
+
+      if (filters.length > 0) {
+        ctx.filter = filters.join(' ');
+      }
+    }
+
     ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
 
     onProgress?.(90);
