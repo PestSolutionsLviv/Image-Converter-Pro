@@ -686,7 +686,7 @@ export default function App() {
             © 2026 Universal Converter Pro
           </p>
           <p className="text-xs font-medium">
-            Автор: <span className="font-semibold text-blue-500">Салдан Тарас</span>
+            Розробник: <span className="font-semibold text-blue-500">Салдан Тарас</span>
           </p>
           <p className={`text-xs ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
             Локальна обробка без серверів
