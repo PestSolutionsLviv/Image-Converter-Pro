@@ -1,6 +1,6 @@
 {
-  "name": "HEIC Converter - Конвертер фото",
-  "description": "Швидкий та безпечний онлайн конвертер HEIC зображень у JPG, PNG, WEBP, PDF та інші формати прямо у браузері.",
+  "name": "Universal Converter Pro",
+  "description": "Універсальний та приватний онлайн конвертер фото, аудіо, відео та документів без серверів прямо у браузері.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

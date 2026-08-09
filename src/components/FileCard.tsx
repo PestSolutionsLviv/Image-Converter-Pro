@@ -2,6 +2,9 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   FileImage,
+  FileText,
+  Music,
+  Video,
   Download,
   Trash2,
   CheckCircle2,
@@ -14,7 +17,7 @@ import {
   Sliders,
 } from 'lucide-react';
 import { FileItem, TargetFormat } from '../types';
-import { formatBytes, saveBlobAsFile, SUPPORTED_FORMATS } from '../lib/converter';
+import { formatBytes, saveBlobAsFile, SUPPORTED_FORMATS, detectFileCategory } from '../lib/converter';
 
 interface FileCardProps {
   item: FileItem;
@@ -51,8 +54,12 @@ export const FileCard: React.FC<FileCardProps> = ({
   isDragging,
   isDragTarget,
 }) => {
-  const isHeic =
-    item.originalFormat === 'heic' || item.originalFormat === 'heif';
+  const category = item.category || detectFileCategory(item.file);
+  const isHeic = item.originalFormat === 'heic' || item.originalFormat === 'heif';
+
+  const categoryFormats = SUPPORTED_FORMATS.filter(
+    (f) => f.category === category
+  );
 
   const hasAdjustments =
     item.adjustments &&
@@ -63,9 +70,8 @@ export const FileCard: React.FC<FileCardProps> = ({
       item.adjustments.sepia !== 0 ||
       item.adjustments.blur !== 0);
 
-  const formatInfo = SUPPORTED_FORMATS.find(
-    (f) => f.id === (item.outputFormat || item.customSettings?.targetFormat || 'jpeg')
-  );
+  const currentTargetFormat = item.customSettings?.targetFormat || item.outputFormat || (categoryFormats[0]?.id || 'jpeg');
+  const formatInfo = SUPPORTED_FORMATS.find((f) => f.id === currentTargetFormat) || categoryFormats[0];
 
   const handleDownload = () => {
     if (item.outputBlob) {
@@ -99,12 +105,12 @@ export const FileCard: React.FC<FileCardProps> = ({
         onDrop?.(e as unknown as React.DragEvent, index);
       }}
       onDragEnd={onDragEnd}
-      className={`bg-white/5 backdrop-blur-xl rounded-2xl border p-4 shadow-xl transition-colors duration-200 select-none ${
+      className={`bg-white/[0.07] backdrop-blur-3xl rounded-[24px] border p-4 shadow-[0_15px_35px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.35)] transition-all duration-200 select-none ${
         isDragging
-          ? 'opacity-30 border-blue-500 border-dashed scale-[0.98]'
+          ? 'opacity-30 border-sky-400 border-dashed scale-[0.98]'
           : isDragTarget
-          ? 'border-blue-400 bg-blue-500/20 ring-2 ring-blue-400/50 scale-[1.01]'
-          : 'border-white/10 hover:border-white/20 hover:bg-white/10'
+          ? 'border-sky-300 bg-blue-500/25 ring-2 ring-sky-300/50 scale-[1.01]'
+          : 'border-white/20 hover:border-white/30 hover:bg-white/[0.12]'
       }`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -145,14 +151,29 @@ export const FileCard: React.FC<FileCardProps> = ({
             )}
           </div>
           
-          {/* Thumbnail Box */}
+          {/* Thumbnail / Category Icon Box */}
           <div className="w-14 h-14 rounded-xl bg-slate-900/80 border border-white/15 flex-shrink-0 flex items-center justify-center overflow-hidden relative group">
-            {item.previewUrl || item.outputUrl ? (
+            {category === 'image' && (item.previewUrl || item.outputUrl) ? (
               <img
                 src={item.outputUrl || item.previewUrl}
                 alt={item.name}
                 className="w-full h-full object-cover"
               />
+            ) : category === 'audio' ? (
+              <div className="flex flex-col items-center justify-center text-emerald-400 p-1">
+                <Music className="w-6 h-6" />
+                <span className="text-[9px] font-bold text-emerald-300 uppercase">AUDIO</span>
+              </div>
+            ) : category === 'video' ? (
+              <div className="flex flex-col items-center justify-center text-purple-400 p-1">
+                <Video className="w-6 h-6" />
+                <span className="text-[9px] font-bold text-purple-300 uppercase">VIDEO</span>
+              </div>
+            ) : category === 'document' ? (
+              <div className="flex flex-col items-center justify-center text-amber-400 p-1">
+                <FileText className="w-6 h-6" />
+                <span className="text-[9px] font-bold text-amber-300 uppercase">DOC</span>
+              </div>
             ) : (
               <FileImage className="w-6 h-6 text-slate-500" />
             )}
@@ -184,9 +205,18 @@ export const FileCard: React.FC<FileCardProps> = ({
                   </span>
                 </>
               )}
+
+              {item.textPreview && (
+                <>
+                  <span>•</span>
+                  <span className="truncate max-w-[150px] italic text-slate-400">
+                    "{item.textPreview.slice(0, 30)}..."
+                  </span>
+                </>
+              )}
             </div>
 
-            {/* Status / Error Message with Fluid Framer Motion Transitions */}
+            {/* Status / Error Message */}
             <div className="mt-1 min-h-[22px] flex items-center">
               <AnimatePresence mode="wait">
                 {item.status === 'idle' && (
@@ -272,12 +302,12 @@ export const FileCard: React.FC<FileCardProps> = ({
           
           {/* Format Selection dropdown for individual file */}
           <select
-            value={item.customSettings?.targetFormat || item.outputFormat || 'jpeg'}
+            value={currentTargetFormat}
             onChange={(e) => onFormatChange(item.id, e.target.value as TargetFormat)}
             disabled={item.status === 'converting' || item.status === 'heic_decoding'}
             className="text-xs font-semibold bg-slate-900/80 border border-white/15 hover:border-white/30 text-slate-200 rounded-xl px-2.5 py-1.5 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 outline-none cursor-pointer"
           >
-            {SUPPORTED_FORMATS.map((f) => (
+            {categoryFormats.map((f) => (
               <option key={f.id} value={f.id} className="bg-slate-900 text-white">
                 {f.label} (. {f.ext})
               </option>
@@ -287,31 +317,35 @@ export const FileCard: React.FC<FileCardProps> = ({
           {/* Action buttons */}
           <div className="flex items-center gap-1">
             
-            <button
-              type="button"
-              onClick={() => onOpenAdjustments?.(item)}
-              className={`p-2 rounded-xl transition-all relative ${
-                hasAdjustments
-                  ? 'text-blue-400 bg-blue-500/20 border border-blue-400/40 hover:bg-blue-500/30'
-                  : 'text-slate-300 hover:text-blue-400 hover:bg-white/10'
-              }`}
-              title="Корекція зображення (яскравість, контраст, ч/б, сепія)"
-            >
-              <Sliders className="w-4 h-4" />
-              {hasAdjustments && (
-                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-400 rounded-full ring-2 ring-slate-900" />
-              )}
-            </button>
+            {category === 'image' && (
+              <button
+                type="button"
+                onClick={() => onOpenAdjustments?.(item)}
+                className={`p-2 rounded-xl transition-all relative ${
+                  hasAdjustments
+                    ? 'text-blue-400 bg-blue-500/20 border border-blue-400/40 hover:bg-blue-500/30'
+                    : 'text-slate-300 hover:text-blue-400 hover:bg-white/10'
+                }`}
+                title="Корекція зображення (яскравість, контраст, ч/б, сепія)"
+              >
+                <Sliders className="w-4 h-4" />
+                {hasAdjustments && (
+                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-400 rounded-full ring-2 ring-slate-900" />
+                )}
+              </button>
+            )}
 
             {item.status === 'completed' && item.outputUrl && (
               <>
-                <button
-                  onClick={() => onCompare(item)}
-                  className="p-2 text-slate-300 hover:text-blue-400 hover:bg-white/10 rounded-xl transition-colors"
-                  title="Порівняти та переглянути"
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
+                {category === 'image' && (
+                  <button
+                    onClick={() => onCompare(item)}
+                    className="p-2 text-slate-300 hover:text-blue-400 hover:bg-white/10 rounded-xl transition-colors"
+                    title="Порівняти та переглянути"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                )}
 
                 <button
                   onClick={handleDownload}
@@ -338,7 +372,7 @@ export const FileCard: React.FC<FileCardProps> = ({
 
       </div>
 
-      {/* Progress Bar with Motion Animation */}
+      {/* Progress Bar */}
       <AnimatePresence>
         {(item.status === 'heic_decoding' || item.status === 'converting') && (
           <motion.div

@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { Header } from './components/Header';
-import { DropZone } from './components/DropZone';
+import { DropZone, DropZoneTab } from './components/DropZone';
 import { GlobalSettings } from './components/GlobalSettings';
 import { FileCard } from './components/FileCard';
 import { BatchActions } from './components/BatchActions';
@@ -15,6 +15,7 @@ import { BatchRenameModal } from './components/BatchRenameModal';
 import { ImageAdjustmentModal } from './components/ImageAdjustmentModal';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { PrivacyInfo } from './components/PrivacyInfo';
+import { UnitAndCurrencyConverter } from './components/UnitAndCurrencyConverter';
 
 import {
   ConversionSettings,
@@ -23,16 +24,21 @@ import {
   ImageAdjustments,
 } from './types';
 import {
-  convertSingleImage,
+  convertFileItem,
   downloadAllAsZip,
   getImageDimensions,
   isHeicFile,
   decodeHeicToBlob,
+  isRawFile,
+  decodeRawToBlob,
+  detectFileCategory,
 } from './lib/converter';
 import { createDemoPhotoFiles } from './lib/sampleFiles';
 import { Image, Layers, Sparkles, Filter, RefreshCw, Type } from 'lucide-react';
 
 export default function App() {
+  const [activeCategoryTab, setActiveCategoryTab] = useState<DropZoneTab>('photo');
+  const [isDarkTheme, setIsDarkTheme] = useState<boolean>(true);
   const [items, setItems] = useState<FileItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isProcessingDemo, setIsProcessingDemo] = useState(false);
@@ -47,11 +53,15 @@ export default function App() {
 
   const [globalSettings, setGlobalSettings] = useState<ConversionSettings>({
     targetFormat: 'jpeg',
+    documentTargetFormat: 'pdf',
+    audioTargetFormat: 'wav',
+    videoTargetFormat: 'mp4_audio',
     quality: 0.88,
     resizeMode: 'original',
     backgroundColor: '#ffffff',
     preserveAspectRatio: true,
     preserveExif: true,
+    autoDownloadZip: false,
   });
 
   // Handle files added (drag & drop or picker)
@@ -63,28 +73,38 @@ export default function App() {
 
       for (const file of files) {
         const id = Math.random().toString(36).substring(2, 11);
-        const ext = file.name.split('.').pop()?.toLowerCase() || 'image';
+        const ext = file.name.split('.').pop()?.toLowerCase() || 'file';
+        const category = detectFileCategory(file);
 
         let previewUrl: string | undefined = undefined;
         let dimensions: { width: number; height: number } | undefined = undefined;
+        let textPreview: string | undefined = undefined;
 
-        // Create object URL for standard images
-        if (!isHeicFile(file) && file.type.startsWith('image/')) {
+        if (category === 'image' && !isHeicFile(file) && !isRawFile(file)) {
           previewUrl = URL.createObjectURL(file);
           try {
             dimensions = await getImageDimensions(previewUrl);
           } catch (e) {
             console.warn('Could not read image dimensions:', e);
           }
+        } else if (category === 'audio' || category === 'video') {
+          previewUrl = URL.createObjectURL(file);
+        } else if (category === 'document') {
+          try {
+            const rawText = await file.text();
+            textPreview = rawText.slice(0, 300);
+          } catch (e) {}
         }
 
         newItems.push({
           id,
           file,
           name: file.name,
+          category,
           originalSize: file.size,
           originalFormat: ext,
           previewUrl,
+          textPreview,
           dimensions,
           status: 'idle',
           progress: 0,
@@ -93,7 +113,7 @@ export default function App() {
 
       setItems((prev) => [...prev, ...newItems]);
 
-      // Process HEIC previews asynchronously
+      // Process HEIC & RAW previews asynchronously
       for (const item of newItems) {
         if (isHeicFile(item.file)) {
           decodeHeicToBlob(item.file)
@@ -114,6 +134,26 @@ export default function App() {
             })
             .catch((err) => {
               console.warn('Initial HEIC thumbnail decode failed:', err);
+            });
+        } else if (isRawFile(item.file)) {
+          decodeRawToBlob(item.file)
+            .then(async (decodedBlob) => {
+              const url = URL.createObjectURL(decodedBlob);
+              let dims: { width: number; height: number } | undefined = undefined;
+              try {
+                dims = await getImageDimensions(url);
+              } catch (e) {}
+
+              setItems((prev) =>
+                prev.map((i) =>
+                  i.id === item.id
+                    ? { ...i, previewUrl: url, dimensions: dims }
+                    : i
+                )
+              );
+            })
+            .catch((err) => {
+              console.warn('Initial RAW thumbnail decode failed:', err);
             });
         }
       }
@@ -155,7 +195,7 @@ export default function App() {
         )
       );
 
-      const result = await convertSingleImage(
+      const result = await convertFileItem(
         item,
         settings,
         (progress) => {
@@ -182,7 +222,7 @@ export default function App() {
         ...item,
         status: 'error',
         progress: 0,
-        errorMessage: err?.message || 'Помилка при конвертації зображення',
+        errorMessage: err?.message || 'Помилка при конвертації файлу',
       };
     }
   };
@@ -194,6 +234,7 @@ export default function App() {
     setIsProcessing(true);
 
     const updatedItems = [...items];
+    const finalConvertedItems: FileItem[] = [];
 
     // Process 2 files in parallel for efficiency while keeping UI responsive
     const batchSize = 2;
@@ -206,11 +247,20 @@ export default function App() {
       const results = await Promise.all(promises);
 
       results.forEach((res) => {
+        finalConvertedItems.push(res);
         setItems((prev) => prev.map((i) => (i.id === res.id ? res : i)));
       });
     }
 
     setIsProcessing(false);
+
+    // If auto-download ZIP is enabled, trigger automatic download for all successfully converted files
+    if (globalSettings.autoDownloadZip) {
+      const completedItems = finalConvertedItems.filter((i) => i.status === 'completed');
+      if (completedItems.length > 0) {
+        downloadAllAsZip(finalConvertedItems, `heic_converted_${Date.now()}.zip`);
+      }
+    }
   }, [items, isProcessing, globalSettings]);
 
   // Individual format override change
@@ -437,14 +487,29 @@ export default function App() {
   ]);
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-100 font-sans antialiased flex flex-col relative overflow-x-hidden">
+    <div
+      className={`min-h-screen font-sans antialiased flex flex-col relative overflow-x-hidden transition-colors duration-300 ${
+        isDarkTheme ? 'bg-[#0f172a] text-slate-100' : 'bg-slate-100 text-slate-800'
+      }`}
+    >
       
       {/* Frosted Glass Background Glowing Orbs */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/25 rounded-full blur-[130px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-700/25 rounded-full blur-[130px]" />
-        <div className="absolute top-[30%] right-[10%] w-[35%] h-[35%] bg-purple-600/20 rounded-full blur-[110px]" />
-        <div className="absolute bottom-[20%] left-[15%] w-[30%] h-[30%] bg-sky-500/15 rounded-full blur-[100px]" />
+        {isDarkTheme ? (
+          <>
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/25 rounded-full blur-[130px]" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-indigo-700/25 rounded-full blur-[130px]" />
+            <div className="absolute top-[30%] right-[10%] w-[35%] h-[35%] bg-purple-600/20 rounded-full blur-[110px]" />
+            <div className="absolute bottom-[20%] left-[15%] w-[30%] h-[30%] bg-sky-500/15 rounded-full blur-[100px]" />
+          </>
+        ) : (
+          <>
+            <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-300/30 rounded-full blur-[130px]" />
+            <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-sky-300/35 rounded-full blur-[130px]" />
+            <div className="absolute top-[30%] right-[10%] w-[35%] h-[35%] bg-indigo-200/40 rounded-full blur-[110px]" />
+            <div className="absolute bottom-[20%] left-[15%] w-[30%] h-[30%] bg-blue-200/30 rounded-full blur-[100px]" />
+          </>
+        )}
       </div>
 
       {/* Top Header */}
@@ -454,19 +519,33 @@ export default function App() {
           isProcessingDemo={isProcessingDemo}
           fileCount={items.length}
           onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
+          isDarkTheme={isDarkTheme}
+          onToggleTheme={() => setIsDarkTheme((prev) => !prev)}
         />
       </div>
 
       {/* Main Content Area */}
       <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         
-        {/* Upload Dropzone */}
+        {/* Upload Dropzone and Category Selector */}
         <DropZone
           onFilesAdded={handleFilesAdded}
           onAddDemoFiles={handleAddDemoFiles}
           isProcessingDemo={isProcessingDemo}
           hasFiles={items.length > 0}
+          activeTab={activeCategoryTab}
+          onTabChange={setActiveCategoryTab}
         />
+
+        {/* Units and Currency Converter View */}
+        {activeCategoryTab === 'units' && (
+          <div className="pt-2">
+            <UnitAndCurrencyConverter
+              isDarkTheme={isDarkTheme}
+              onToggleTheme={() => setIsDarkTheme((prev) => !prev)}
+            />
+          </div>
+        )}
 
         {/* Global Settings Panel */}
         {items.length > 0 && (
@@ -583,10 +662,25 @@ export default function App() {
       />
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/10 bg-slate-950/40 backdrop-blur-xl py-6 mt-12 text-center text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© 2026 HEIC Converter • Онлайн обробка фото без серверів</p>
-          <div className="flex items-center gap-4 text-slate-500">
+      <footer
+        className={`relative z-10 border-t py-8 mt-12 text-center text-xs backdrop-blur-xl transition-colors duration-300 ${
+          isDarkTheme
+            ? 'border-white/10 bg-slate-950/40 text-slate-400'
+            : 'border-slate-200 bg-white/70 text-slate-600 shadow-sm'
+        }`}
+      >
+        <div className="max-w-3xl mx-auto px-4 flex flex-col items-center justify-center gap-2">
+          <p className={`font-bold text-sm tracking-wide ${isDarkTheme ? 'text-slate-200' : 'text-slate-800'}`}>
+            © 2026 Universal Converter Pro
+          </p>
+          <p className="text-xs font-medium">
+            Автор: <span className="font-semibold text-blue-500">Салдан Тарас</span>
+          </p>
+          <p className={`text-xs ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
+            Локальна обробка без серверів
+          </p>
+          
+          <div className={`flex flex-wrap items-center justify-center gap-2 pt-2 text-[11px] ${isDarkTheme ? 'text-slate-500' : 'text-slate-400'}`}>
             <span>Client-side WASM</span>
             <span>•</span>
             <span>Privacy First</span>

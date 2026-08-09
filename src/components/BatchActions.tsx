@@ -33,7 +33,7 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="bg-slate-900/80 backdrop-blur-2xl rounded-3xl border border-white/15 p-4 sm:p-5 shadow-2xl sticky bottom-4 z-20"
+      className="bg-slate-900/50 backdrop-blur-3xl rounded-[28px] border border-white/20 p-4 sm:p-5 shadow-[0_25px_60px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.35)] sticky bottom-4 z-20"
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         
@@ -69,9 +69,9 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
               className="text-xs text-slate-400"
             >
               {isProcessing
-                ? 'Триває обробка фотографій у браузері...'
+                ? 'Триває обробка файлів у браузері...'
                 : isAllCompleted
-                ? 'Усі зображення успішно конвертовано'
+                ? 'Усі файли успішно конвертовано'
                 : `Залишилось обробити: ${idleCount} ${
                     errorCount > 0 ? `(${errorCount} помилок)` : ''
                   }`}
@@ -86,7 +86,7 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
             type="button"
             onClick={onClearAll}
             disabled={isProcessing}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:text-red-400 hover:bg-red-500/15 rounded-2xl transition-all border border-white/10 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:text-red-300 bg-white/10 hover:bg-red-500/20 active:scale-95 rounded-full transition-all border border-white/20 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] disabled:opacity-50"
           >
             <Trash2 className="w-3.5 h-3.5" />
             Очистити
@@ -101,9 +101,9 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
                 type="button"
                 onClick={onDownloadZip}
                 disabled={isProcessing}
-                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-2xl border border-emerald-400/30 transition-all shadow-xl shadow-emerald-600/30 hover:scale-[1.02]"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-gradient-to-b from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 active:scale-95 rounded-full border border-emerald-300/40 transition-all shadow-[0_10px_25px_-5px_rgba(16,185,129,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)]"
               >
-                <Archive className="w-4 h-4 text-emerald-200" />
+                <Archive className="w-4 h-4 text-emerald-100" />
                 Завантажити ZIP ({completedCount})
               </motion.button>
             )}
@@ -114,7 +114,7 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
               type="button"
               onClick={onConvertAll}
               disabled={isProcessing}
-              className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 active:bg-blue-700 rounded-2xl shadow-xl shadow-blue-600/30 transition-all border border-blue-400/30 hover:scale-[1.02] disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-bold text-white bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-95 rounded-full transition-all border border-blue-300/40 shadow-[0_10px_25px_-5px_rgba(37,99,235,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)] disabled:opacity-50"
             >
               {isProcessing ? (
                 <>

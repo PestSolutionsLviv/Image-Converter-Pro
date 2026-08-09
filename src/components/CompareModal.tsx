@@ -50,17 +50,19 @@ export const CompareModal: React.FC<CompareModalProps> = ({ item, onClose }) => 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-slate-900/90 backdrop-blur-2xl rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl border border-white/20">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-2xl animate-fade-in">
+      <div className="bg-slate-900/60 backdrop-blur-3xl rounded-[32px] max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.35)] border border-white/20">
         
         {/* Modal Header */}
-        <div className="p-4 px-6 border-b border-white/10 flex items-center justify-between bg-white/5">
+        <div className="p-4 px-6 border-b border-white/15 flex items-center justify-between bg-white/[0.05]">
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <SlidersHorizontal className="w-5 h-5 text-blue-400" />
+            <h3 className="text-base font-bold text-white flex items-center gap-2 tracking-tight drop-shadow-sm">
+              <div className="p-1.5 rounded-xl bg-blue-500/20 border border-blue-400/30 text-sky-300">
+                <SlidersHorizontal className="w-4 h-4" />
+              </div>
               Порівняння "До" та "Після"
             </h3>
-            <p className="text-xs text-slate-400 font-mono truncate max-w-md">
+            <p className="text-xs text-slate-300/80 font-mono truncate max-w-md mt-0.5">
               {item.name}
             </p>
           </div>
@@ -68,7 +70,7 @@ export const CompareModal: React.FC<CompareModalProps> = ({ item, onClose }) => 
           <div className="flex items-center gap-2">
             <button
               onClick={handleDownload}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-xl shadow-lg shadow-blue-600/30 transition-all border border-blue-400/30"
+              className="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold text-white bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 rounded-full shadow-[0_8px_20px_rgba(37,99,235,0.4),inset_0_1px_1px_rgba(255,255,255,0.4)] transition-all border border-blue-300/40 active:scale-95"
             >
               <Download className="w-4 h-4" />
               Завантажити
@@ -76,7 +78,7 @@ export const CompareModal: React.FC<CompareModalProps> = ({ item, onClose }) => 
 
             <button
               onClick={onClose}
-              className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+              className="p-2 text-slate-300 hover:text-white hover:bg-white/15 rounded-full transition-all active:scale-95 border border-white/10"
             >
               <X className="w-5 h-5" />
             </button>
@@ -84,7 +86,7 @@ export const CompareModal: React.FC<CompareModalProps> = ({ item, onClose }) => 
         </div>
 
         {/* Comparison Viewer */}
-        <div className="flex-1 bg-slate-950/80 relative overflow-hidden flex items-center justify-center min-h-[360px] max-h-[60vh] select-none">
+        <div className="flex-1 bg-black/40 relative overflow-hidden flex items-center justify-center min-h-[360px] max-h-[60vh] select-none backdrop-blur-2xl">
           
           <div
             className="relative w-full h-full max-w-3xl max-h-[55vh] flex items-center justify-center cursor-ew-resize"
@@ -116,20 +118,20 @@ export const CompareModal: React.FC<CompareModalProps> = ({ item, onClose }) => 
 
             {/* Split Slider Bar */}
             <div
-              className="absolute top-0 bottom-0 w-1 bg-white shadow-2xl pointer-events-none z-10"
+              className="absolute top-0 bottom-0 w-1 bg-white/80 shadow-2xl pointer-events-none z-10 backdrop-blur-md"
               style={{ left: `${sliderPosition}%` }}
             >
-              <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-blue-600 text-white shadow-xl flex items-center justify-center border-2 border-white text-xs font-bold">
+              <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-9 h-9 rounded-full bg-gradient-to-b from-blue-500 to-sky-400 text-white shadow-xl flex items-center justify-center border-2 border-white/80 text-xs font-bold backdrop-blur-xl">
                 ↔
               </div>
             </div>
 
             {/* Side Badges */}
-            <div className="absolute top-4 left-4 bg-slate-900/90 backdrop-blur-md text-slate-200 text-xs px-3 py-1.5 rounded-xl border border-white/15 font-medium">
+            <div className="absolute top-4 left-4 bg-black/40 backdrop-blur-2xl text-slate-100 text-xs px-3.5 py-1.5 rounded-full border border-white/20 font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
               До: {item.originalFormat.toUpperCase()} ({formatBytes(originalSize)})
             </div>
 
-            <div className="absolute top-4 right-4 bg-blue-950/90 backdrop-blur-md text-blue-200 text-xs px-3 py-1.5 rounded-xl border border-blue-400/40 font-medium">
+            <div className="absolute top-4 right-4 bg-blue-900/40 backdrop-blur-2xl text-sky-100 text-xs px-3.5 py-1.5 rounded-full border border-blue-300/40 font-medium shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
               Після: {item.outputFormat?.toUpperCase()} ({formatBytes(outputSize)})
             </div>
 
@@ -138,31 +140,31 @@ export const CompareModal: React.FC<CompareModalProps> = ({ item, onClose }) => 
         </div>
 
         {/* Modal Footer Statistics */}
-        <div className="p-4 px-6 bg-white/5 border-t border-white/10 flex flex-wrap items-center justify-between gap-4">
+        <div className="p-4 px-6 bg-white/[0.05] border-t border-white/15 flex flex-wrap items-center justify-between gap-4">
           
           <div className="flex items-center gap-6">
             <div>
-              <span className="text-[11px] text-slate-400 uppercase tracking-wider block">Оригінальний розмір</span>
-              <span className="text-sm font-bold text-slate-200">{formatBytes(originalSize)}</span>
+              <span className="text-[11px] text-slate-300/80 uppercase tracking-wider block">Оригінальний розмір</span>
+              <span className="text-sm font-bold text-slate-100">{formatBytes(originalSize)}</span>
             </div>
 
-            <ArrowRight className="w-4 h-4 text-slate-500" />
+            <ArrowRight className="w-4 h-4 text-sky-300" />
 
             <div>
-              <span className="text-[11px] text-slate-400 uppercase tracking-wider block">Новий розмір</span>
-              <span className="text-sm font-bold text-blue-400">{formatBytes(outputSize)}</span>
+              <span className="text-[11px] text-slate-300/80 uppercase tracking-wider block">Новий розмір</span>
+              <span className="text-sm font-bold text-sky-300">{formatBytes(outputSize)}</span>
             </div>
 
             {savingsPct !== 0 && (
-              <div className={`px-3 py-1 rounded-xl text-xs font-bold border ${
-                savingsPct > 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30' : 'bg-slate-800 text-slate-300 border-white/10'
+              <div className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                savingsPct > 0 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]' : 'bg-black/30 text-slate-300 border-white/10'
               }`}>
                 {savingsPct > 0 ? `Економія ${savingsPct}%` : `+${Math.abs(savingsPct)}%`}
               </div>
             )}
           </div>
 
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-300/80">
             Перетягуйте бігунок вліво/вправо для візуального порівняння деталізації
           </p>
 

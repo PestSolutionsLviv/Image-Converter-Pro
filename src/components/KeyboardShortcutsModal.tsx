@@ -58,41 +58,41 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-fade-in">
-      <div className="bg-slate-900/95 backdrop-blur-2xl rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-white/20">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-2xl animate-fade-in">
+      <div className="bg-slate-900/60 backdrop-blur-3xl rounded-[32px] max-w-lg w-full p-6 shadow-[0_25px_60px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.35)] border border-white/20">
         
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-400/30 text-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/20">
+        <div className="flex items-center justify-between pb-4 border-b border-white/15 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-[18px] bg-gradient-to-tr from-blue-500/25 to-sky-400/25 border border-blue-300/40 text-sky-300 flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]">
               <Keyboard className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Гарячі клавіші</h3>
-              <p className="text-xs text-slate-400">Швидке управління без використання миші</p>
+              <h3 className="text-lg font-bold text-white tracking-tight drop-shadow-sm">Гарячі клавіші</h3>
+              <p className="text-xs text-slate-300/80">Швидке управління без використання миші</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+            className="p-2 text-slate-300 hover:text-white hover:bg-white/15 rounded-full transition-all active:scale-95 border border-white/10"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Shortcuts List */}
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {shortcuts.map((sc, idx) => (
             <div
               key={idx}
-              className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+              className="flex items-center justify-between p-3 rounded-2xl bg-black/20 border border-white/15 hover:bg-white/10 transition-colors backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]"
             >
               <div className="flex items-center gap-3">
                 {sc.icon}
-                <span className="text-xs font-semibold text-slate-200">{sc.label}</span>
+                <span className="text-xs font-semibold text-slate-100">{sc.label}</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <kbd className="px-2.5 py-1 text-[11px] font-mono font-bold text-blue-300 bg-slate-950 border border-white/20 rounded-lg shadow-inner">
+                <kbd className="px-3 py-1 text-[11px] font-mono font-bold text-sky-300 bg-black/40 border border-white/20 rounded-full shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
                   {sc.key}
                 </kbd>
               </div>
@@ -101,15 +101,15 @@ export const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="mt-6 pt-4 border-t border-white/10 flex items-center justify-between">
-          <span className="text-[11px] text-slate-400 flex items-center gap-1">
-            <Command className="w-3.5 h-3.5 text-slate-500" />
-            Натисніть <kbd className="px-1.5 py-0.5 text-[10px] bg-slate-800 rounded border border-white/10 text-slate-300 font-mono">?</kbd> у будь-який момент
+        <div className="mt-6 pt-4 border-t border-white/15 flex items-center justify-between">
+          <span className="text-[11px] text-slate-300/80 flex items-center gap-1">
+            <Command className="w-3.5 h-3.5 text-sky-300" />
+            Натисніть <kbd className="px-2 py-0.5 text-[10px] bg-black/40 rounded-full border border-white/20 text-sky-200 font-mono">?</kbd> у будь-який момент
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-xl transition-all border border-blue-400/30"
+            className="px-5 py-2 text-xs font-bold text-white bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-95 rounded-full transition-all border border-blue-300/40 shadow-[0_8px_20px_rgba(37,99,235,0.4),inset_0_1px_1px_rgba(255,255,255,0.4)]"
           >
             Зрозуміло
           </button>
