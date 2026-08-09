@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Play, Download, Trash2, CheckCircle2, Loader2, Archive } from 'lucide-react';
 import { FileItem } from '../types';
 
@@ -28,7 +29,12 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
   const progressPercent = Math.round((completedCount / totalCount) * 100);
 
   return (
-    <div className="bg-slate-900/80 backdrop-blur-2xl rounded-3xl border border-white/15 p-4 sm:p-5 shadow-2xl sticky bottom-4 z-20">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="bg-slate-900/80 backdrop-blur-2xl rounded-3xl border border-white/15 p-4 sm:p-5 shadow-2xl sticky bottom-4 z-20"
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         
         {/* Progress & Stats */}
@@ -37,23 +43,40 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
             <h3 className="text-sm font-bold text-white">
               Файли ({completedCount} / {totalCount} оброблено)
             </h3>
-            {isAllCompleted && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-400/30">
-                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                Готово
-              </span>
-            )}
+            <AnimatePresence>
+              {isAllCompleted && (
+                <motion.span
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-400/30"
+                >
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  Готово
+                </motion.span>
+              )}
+            </AnimatePresence>
           </div>
 
-          <p className="text-xs text-slate-400">
-            {isProcessing
-              ? 'Триває обробка фотографій у браузері...'
-              : isAllCompleted
-              ? 'Усі зображення успішно конвертовано'
-              : `Залишилось обробити: ${idleCount} ${
-                  errorCount > 0 ? `(${errorCount} помилок)` : ''
-                }`}
-          </p>
+          <AnimatePresence mode="wait">
+            <motion.p
+              key={isProcessing ? 'processing' : isAllCompleted ? 'completed' : 'idle'}
+              initial={{ opacity: 0, y: 2 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -2 }}
+              transition={{ duration: 0.15 }}
+              className="text-xs text-slate-400"
+            >
+              {isProcessing
+                ? 'Триває обробка фотографій у браузері...'
+                : isAllCompleted
+                ? 'Усі зображення успішно конвертовано'
+                : `Залишилось обробити: ${idleCount} ${
+                    errorCount > 0 ? `(${errorCount} помилок)` : ''
+                  }`}
+            </motion.p>
+          </AnimatePresence>
         </div>
 
         {/* Action Buttons */}
@@ -69,17 +92,22 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
             Очистити
           </button>
 
-          {completedCount > 0 && (
-            <button
-              type="button"
-              onClick={onDownloadZip}
-              disabled={isProcessing}
-              className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-2xl border border-emerald-400/30 transition-all shadow-xl shadow-emerald-600/30 hover:scale-[1.02]"
-            >
-              <Archive className="w-4 h-4 text-emerald-200" />
-              Завантажити ZIP ({completedCount})
-            </button>
-          )}
+          <AnimatePresence>
+            {completedCount > 0 && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                type="button"
+                onClick={onDownloadZip}
+                disabled={isProcessing}
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 rounded-2xl border border-emerald-400/30 transition-all shadow-xl shadow-emerald-600/30 hover:scale-[1.02]"
+              >
+                <Archive className="w-4 h-4 text-emerald-200" />
+                Завантажити ZIP ({completedCount})
+              </motion.button>
+            )}
+          </AnimatePresence>
 
           {!isAllCompleted && (
             <button
@@ -107,14 +135,23 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
       </div>
 
       {/* Global Progress Bar */}
-      {isProcessing && (
-        <div className="w-full bg-slate-800 rounded-full h-2 mt-3 overflow-hidden">
-          <div
-            className="bg-blue-500 h-full rounded-full transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-      )}
-    </div>
+      <AnimatePresence>
+        {isProcessing && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="w-full bg-slate-800 rounded-full h-2 mt-3 overflow-hidden"
+          >
+            <motion.div
+              className="bg-gradient-to-r from-blue-500 via-indigo-500 to-sky-400 h-full rounded-full"
+              initial={{ width: '0%' }}
+              animate={{ width: `${Math.max(progressPercent, 2)}%` }}
+              transition={{ type: 'spring', stiffness: 100, damping: 18 }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };

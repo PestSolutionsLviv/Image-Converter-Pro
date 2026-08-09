@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { AnimatePresence } from 'motion/react';
 import { Header } from './components/Header';
 import { DropZone } from './components/DropZone';
 import { GlobalSettings } from './components/GlobalSettings';
@@ -513,26 +514,28 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-1 gap-2.5">
-              {items.map((item, index) => (
-                <FileCard
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  totalCount={items.length}
-                  onRemove={handleRemove}
-                  onCompare={setCompareItem}
-                  onFormatChange={handleFormatChange}
-                  onOpenAdjustments={setAdjustingItem}
-                  onMoveUp={(idx) => handleMoveItem(idx, idx - 1)}
-                  onMoveDown={(idx) => handleMoveItem(idx, idx + 1)}
-                  onDragStart={handleDragStart}
-                  onDragOver={handleDragOver}
-                  onDrop={handleDrop}
-                  onDragEnd={handleDragEnd}
-                  isDragging={draggedIndex === index}
-                  isDragTarget={dragOverIndex === index && draggedIndex !== index}
-                />
-              ))}
+              <AnimatePresence initial={false}>
+                {items.map((item, index) => (
+                  <FileCard
+                    key={item.id}
+                    item={item}
+                    index={index}
+                    totalCount={items.length}
+                    onRemove={handleRemove}
+                    onCompare={setCompareItem}
+                    onFormatChange={handleFormatChange}
+                    onOpenAdjustments={setAdjustingItem}
+                    onMoveUp={(idx) => handleMoveItem(idx, idx - 1)}
+                    onMoveDown={(idx) => handleMoveItem(idx, idx + 1)}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onDragEnd={handleDragEnd}
+                    isDragging={draggedIndex === index}
+                    isDragTarget={dragOverIndex === index && draggedIndex !== index}
+                  />
+                ))}
+              </AnimatePresence>
             </div>
           </div>
         )}

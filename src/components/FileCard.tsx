@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   FileImage,
   Download,
@@ -81,19 +82,24 @@ export const FileCard: React.FC<FileCardProps> = ({
       : null;
 
   return (
-    <div
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       draggable
-      onDragStart={(e) => onDragStart?.(e, index)}
+      onDragStart={(e) => onDragStart?.(e as unknown as React.DragEvent, index)}
       onDragOver={(e) => {
         e.preventDefault();
-        onDragOver?.(e, index);
+        onDragOver?.(e as unknown as React.DragEvent, index);
       }}
       onDrop={(e) => {
         e.preventDefault();
-        onDrop?.(e, index);
+        onDrop?.(e as unknown as React.DragEvent, index);
       }}
       onDragEnd={onDragEnd}
-      className={`bg-white/5 backdrop-blur-xl rounded-2xl border p-4 shadow-xl transition-all duration-200 select-none ${
+      className={`bg-white/5 backdrop-blur-xl rounded-2xl border p-4 shadow-xl transition-colors duration-200 select-none ${
         isDragging
           ? 'opacity-30 border-blue-500 border-dashed scale-[0.98]'
           : isDragTarget
@@ -180,52 +186,82 @@ export const FileCard: React.FC<FileCardProps> = ({
               )}
             </div>
 
-            {/* Status / Error Message */}
-            <div className="mt-1 flex items-center gap-2">
-              {item.status === 'idle' && (
-                <span className="text-[11px] font-medium text-slate-400">
-                  В черзі...
-                </span>
-              )}
+            {/* Status / Error Message with Fluid Framer Motion Transitions */}
+            <div className="mt-1 min-h-[22px] flex items-center">
+              <AnimatePresence mode="wait">
+                {item.status === 'idle' && (
+                  <motion.span
+                    key="idle"
+                    initial={{ opacity: 0, y: 3 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -3 }}
+                    transition={{ duration: 0.15 }}
+                    className="text-[11px] font-medium text-slate-400"
+                  >
+                    В черзі...
+                  </motion.span>
+                )}
 
-              {(item.status === 'heic_decoding' || item.status === 'converting') && (
-                <div className="flex items-center gap-1.5 text-[11px] font-medium text-blue-400">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>
-                    {item.status === 'heic_decoding'
-                      ? 'Декодування HEIC...'
-                      : 'Конвертація...'}
-                  </span>
-                </div>
-              )}
-
-              {item.status === 'completed' && item.outputSize && (
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="inline-flex items-center gap-1 font-semibold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-lg border border-emerald-400/30">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                    {formatBytes(item.outputSize)}
-                  </span>
-
-                  {savingsPct !== null && (
-                    <span
-                      className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${
-                        savingsPct >= 0
-                          ? 'text-emerald-300 bg-emerald-500/15'
-                          : 'text-amber-300 bg-amber-500/15'
-                      }`}
-                    >
-                      {savingsPct >= 0 ? `-${savingsPct}%` : `+${Math.abs(savingsPct)}%`}
+                {(item.status === 'heic_decoding' || item.status === 'converting') && (
+                  <motion.div
+                    key="processing"
+                    initial={{ opacity: 0, y: 3 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -3 }}
+                    transition={{ duration: 0.15 }}
+                    className="flex items-center gap-1.5 text-[11px] font-medium text-blue-400"
+                  >
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>
+                      {item.status === 'heic_decoding'
+                        ? 'Декодування HEIC...'
+                        : 'Конвертація...'}
                     </span>
-                  )}
-                </div>
-              )}
+                  </motion.div>
+                )}
 
-              {item.status === 'error' && (
-                <span className="text-[11px] font-medium text-red-400 flex items-center gap-1">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  {item.errorMessage || 'Помилка'}
-                </span>
-              )}
+                {item.status === 'completed' && item.outputSize && (
+                  <motion.div
+                    key="completed"
+                    initial={{ opacity: 0, scale: 0.9, y: 3 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -3 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <span className="inline-flex items-center gap-1 font-semibold text-emerald-300 bg-emerald-500/15 px-2 py-0.5 rounded-lg border border-emerald-400/30">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      {formatBytes(item.outputSize)}
+                    </span>
+
+                    {savingsPct !== null && (
+                      <span
+                        className={`text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${
+                          savingsPct >= 0
+                            ? 'text-emerald-300 bg-emerald-500/15'
+                            : 'text-amber-300 bg-amber-500/15'
+                        }`}
+                      >
+                        {savingsPct >= 0 ? `-${savingsPct}%` : `+${Math.abs(savingsPct)}%`}
+                      </span>
+                    )}
+                  </motion.div>
+                )}
+
+                {item.status === 'error' && (
+                  <motion.span
+                    key="error"
+                    initial={{ opacity: 0, y: 3 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -3 }}
+                    transition={{ duration: 0.15 }}
+                    className="text-[11px] font-medium text-red-400 flex items-center gap-1"
+                  >
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {item.errorMessage || 'Помилка'}
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </div>
           </div>
 
@@ -302,15 +338,24 @@ export const FileCard: React.FC<FileCardProps> = ({
 
       </div>
 
-      {/* Progress Bar */}
-      {(item.status === 'heic_decoding' || item.status === 'converting') && (
-        <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
-          <div
-            className="bg-blue-500 h-full rounded-full transition-all duration-300"
-            style={{ width: `${item.progress}%` }}
-          />
-        </div>
-      )}
-    </div>
+      {/* Progress Bar with Motion Animation */}
+      <AnimatePresence>
+        {(item.status === 'heic_decoding' || item.status === 'converting') && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden relative"
+          >
+            <motion.div
+              className="bg-gradient-to-r from-blue-600 to-indigo-400 h-full rounded-full"
+              initial={{ width: '0%' }}
+              animate={{ width: `${Math.max(item.progress, 5)}%` }}
+              transition={{ type: 'spring', stiffness: 120, damping: 18 }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 };
