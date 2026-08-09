@@ -34,7 +34,7 @@ import {
   detectFileCategory,
 } from './lib/converter';
 import { createDemoPhotoFiles } from './lib/sampleFiles';
-import { Image, Layers, Sparkles, Filter, RefreshCw, Type } from 'lucide-react';
+import { Image, Layers, Sparkles, Filter, RefreshCw, Type, Heart } from 'lucide-react';
 
 export default function App() {
   const [activeCategoryTab, setActiveCategoryTab] = useState<DropZoneTab>('photo');
@@ -685,9 +685,22 @@ export default function App() {
           <p className={`font-bold text-sm tracking-wide ${isDarkTheme ? 'text-slate-200' : 'text-slate-800'}`}>
             © 2026 Universal Converter Pro
           </p>
-          <p className="text-xs font-medium">
-            Розробник: <span className="font-semibold text-blue-500">Салдан Тарас</span>
-          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 my-0.5">
+            <p className="text-xs font-medium">
+              Розробник: <span className="font-semibold text-blue-500">Салдан Тарас</span>
+            </p>
+
+            <a
+              href="https://send.monobank.ua/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 rounded-full shadow-[0_4px_15px_rgba(251,191,36,0.35),inset_0_1px_1px_rgba(255,255,255,0.6)] border border-amber-300/60 hover:scale-[1.03] active:scale-95 transition-all"
+              title="Підтримати розробника через Банку Monobank"
+            >
+              <Heart className="w-3.5 h-3.5 text-rose-600 fill-rose-600 animate-pulse" />
+              <span>Підтримати (Monobank ☕)</span>
+            </a>
+          </div>
           <p className={`text-xs ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
             Локальна обробка без серверів
           </p>

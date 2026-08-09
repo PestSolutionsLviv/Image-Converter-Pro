@@ -16,6 +16,7 @@ import {
   Calculator,
   Layers,
   Info,
+  Heart,
 } from 'lucide-react';
 import { DropZoneTab } from './DropZone';
 
@@ -326,9 +327,20 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
 
               {/* Drawer Footer */}
-              <div className="pt-4 border-t border-white/10 text-center space-y-1 text-xs text-slate-400">
+              <div className="pt-4 border-t border-white/10 text-center space-y-2 text-xs text-slate-400">
                 <p className="font-bold text-slate-200">© 2026 Universal Converter Pro</p>
                 <p className="text-[11px] font-semibold text-blue-400">Розробник: Салдан Тарас</p>
+                <div className="pt-1">
+                  <a
+                    href="https://send.monobank.ua/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 rounded-full shadow-[0_4px_15px_rgba(251,191,36,0.35)] border border-amber-300/60 active:scale-95 transition-all"
+                  >
+                    <Heart className="w-3.5 h-3.5 text-rose-600 fill-rose-600 animate-pulse" />
+                    <span>Підтримати (Monobank ☕)</span>
+                  </a>
+                </div>
               </div>
             </motion.div>
           </>
