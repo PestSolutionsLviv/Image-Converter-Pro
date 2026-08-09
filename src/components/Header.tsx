@@ -338,7 +338,7 @@ export const Header: React.FC<HeaderProps> = ({
                     className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 rounded-full shadow-[0_4px_15px_rgba(251,191,36,0.35)] border border-amber-300/60 active:scale-95 transition-all"
                   >
                     <Heart className="w-3.5 h-3.5 text-rose-600 fill-rose-600 animate-pulse" />
-                    <span>Підтримати (Monobank ☕)</span>
+                    <span>Підтримати проєкт (Monobank ☕)</span>
                   </a>
                 </div>
               </div>

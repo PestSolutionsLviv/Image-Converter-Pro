@@ -698,7 +698,7 @@ export default function App() {
               title="Підтримати розробника через Банку Monobank"
             >
               <Heart className="w-3.5 h-3.5 text-rose-600 fill-rose-600 animate-pulse" />
-              <span>Підтримати (Monobank ☕)</span>
+              <span>Підтримати проєкт (Monobank ☕)</span>
             </a>
           </div>
           <p className={`text-xs ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
