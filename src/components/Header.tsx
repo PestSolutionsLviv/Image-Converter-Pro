@@ -329,7 +329,6 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="pt-4 border-t border-white/10 text-center space-y-1 text-xs text-slate-400">
                 <p className="font-bold text-slate-200">© 2026 Universal Converter Pro</p>
                 <p className="text-[11px] font-semibold text-blue-400">Розробник: Салдан Тарас</p>
-                <p className="text-[10px] text-slate-500">Client-side WASM • Privacy First</p>
               </div>
             </motion.div>
           </>

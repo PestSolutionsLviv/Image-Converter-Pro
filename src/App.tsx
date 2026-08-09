@@ -691,14 +691,6 @@ export default function App() {
           <p className={`text-xs ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
             Локальна обробка без серверів
           </p>
-          
-          <div className={`flex flex-wrap items-center justify-center gap-2 pt-2 text-[11px] ${isDarkTheme ? 'text-slate-500' : 'text-slate-400'}`}>
-            <span>Client-side WASM</span>
-            <span>•</span>
-            <span>Privacy First</span>
-            <span>•</span>
-            <span>Zero Data Upload</span>
-          </div>
         </div>
       </footer>
 
