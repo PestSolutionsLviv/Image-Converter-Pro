@@ -9,6 +9,7 @@ interface BatchActionsProps {
   onConvertAll: () => void;
   onDownloadZip: () => void;
   onClearAll: () => void;
+  isDarkTheme?: boolean;
 }
 
 export const BatchActions: React.FC<BatchActionsProps> = ({
@@ -17,6 +18,7 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
   onConvertAll,
   onDownloadZip,
   onClearAll,
+  isDarkTheme = true,
 }) => {
   const totalCount = items.length;
   if (totalCount === 0) return null;
@@ -33,14 +35,17 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
-      className="bg-slate-900/50 backdrop-blur-3xl rounded-[28px] border border-white/20 p-4 sm:p-5 shadow-[0_25px_60px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.35)] sticky bottom-4 z-20"
+      className={`rounded-[28px] border p-4 sm:p-5 sticky bottom-4 z-20 backdrop-blur-3xl transition-colors duration-300 ${
+        isDarkTheme
+          ? 'bg-slate-900/80 border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.35)]'
+          : 'bg-white/95 border-slate-200/90 shadow-xl shadow-slate-300/60'
+      }`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        
         {/* Progress & Stats */}
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-sm font-bold text-white">
+            <h3 className={`text-sm font-bold ${isDarkTheme ? 'text-white' : 'text-slate-900'}`}>
               Файли ({completedCount} / {totalCount} оброблено)
             </h3>
             <AnimatePresence>
@@ -50,9 +55,13 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.8 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-300 bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-400/30"
+                  className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                    isDarkTheme
+                      ? 'text-emerald-300 bg-emerald-500/20 border-emerald-400/30'
+                      : 'text-emerald-800 bg-emerald-100 border-emerald-300'
+                  }`}
                 >
-                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                   Готово
                 </motion.span>
               )}
@@ -66,7 +75,7 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -2 }}
               transition={{ duration: 0.15 }}
-              className="text-xs text-slate-400"
+              className={`text-xs ${isDarkTheme ? 'text-slate-400' : 'text-slate-600 font-medium'}`}
             >
               {isProcessing
                 ? 'Триває обробка файлів у браузері...'
@@ -81,12 +90,15 @@ export const BatchActions: React.FC<BatchActionsProps> = ({
 
         {/* Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5">
-          
           <button
             type="button"
             onClick={onClearAll}
             disabled={isProcessing}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-slate-200 hover:text-red-300 bg-white/10 hover:bg-red-500/20 active:scale-95 rounded-full transition-all border border-white/20 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.25)] disabled:opacity-50"
+            className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold active:scale-95 rounded-full border transition-all disabled:opacity-50 ${
+              isDarkTheme
+                ? 'text-slate-200 hover:text-red-300 bg-white/10 hover:bg-red-500/20 border-white/20'
+                : 'text-slate-700 hover:text-red-600 bg-slate-100 hover:bg-red-50 border-slate-300'
+            }`}
           >
             <Trash2 className="w-3.5 h-3.5" />
             Очистити

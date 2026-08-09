@@ -521,6 +521,8 @@ export default function App() {
           onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
           isDarkTheme={isDarkTheme}
           onToggleTheme={() => setIsDarkTheme((prev) => !prev)}
+          activeTab={activeCategoryTab}
+          onTabChange={setActiveCategoryTab}
         />
       </div>
 
@@ -535,6 +537,7 @@ export default function App() {
           hasFiles={items.length > 0}
           activeTab={activeCategoryTab}
           onTabChange={setActiveCategoryTab}
+          isDarkTheme={isDarkTheme}
         />
 
         {/* Units and Currency Converter View */}
@@ -553,6 +556,7 @@ export default function App() {
             settings={globalSettings}
             onChange={setGlobalSettings}
             disabled={isProcessing}
+            isDarkTheme={isDarkTheme}
           />
         )}
 
@@ -560,11 +564,11 @@ export default function App() {
         {items.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between px-1">
-              <h2 className="text-sm font-bold text-slate-200 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-blue-400" />
+              <h2 className={`text-sm font-bold flex items-center gap-2 ${isDarkTheme ? 'text-slate-200' : 'text-slate-900'}`}>
+                <Layers className={`w-4 h-4 ${isDarkTheme ? 'text-blue-400' : 'text-blue-600'}`} />
                 Список файлів ({items.length})
-                <span className="text-xs text-slate-400 font-normal ml-1 hidden sm:inline">
-                  • перетягуйте для зміни порядку
+                <span className={`text-xs font-normal ml-1 hidden sm:inline ${isDarkTheme ? 'text-slate-400' : 'text-slate-600'}`}>
+                  • перетягуйте для зміни порядку або свайпайте для дій
                 </span>
               </h2>
 
@@ -573,7 +577,11 @@ export default function App() {
                   type="button"
                   onClick={() => setIsRenameModalOpen(true)}
                   disabled={isProcessing}
-                  className="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-400/30 px-3 py-1 rounded-xl backdrop-blur-md transition-all disabled:opacity-50"
+                  className={`text-xs font-semibold flex items-center gap-1.5 px-3 py-1 rounded-xl backdrop-blur-md transition-all disabled:opacity-50 ${
+                    isDarkTheme
+                      ? 'text-blue-400 hover:text-blue-300 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-400/30'
+                      : 'text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-xs'
+                  }`}
                   title="Додати префікс, суфікс або змінити назви файлів"
                 >
                   <Type className="w-3.5 h-3.5" />
@@ -584,7 +592,9 @@ export default function App() {
                   type="button"
                   onClick={handleConvertAll}
                   disabled={isProcessing}
-                  className="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+                  className={`text-xs font-semibold flex items-center gap-1.5 disabled:opacity-50 transition-colors ${
+                    isDarkTheme ? 'text-blue-400 hover:text-blue-300' : 'text-blue-700 hover:text-blue-800'
+                  }`}
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${isProcessing ? 'animate-spin' : ''}`} />
                   {isProcessing ? 'Конвертація...' : 'Перезапустити всі'}
@@ -612,6 +622,7 @@ export default function App() {
                     onDragEnd={handleDragEnd}
                     isDragging={draggedIndex === index}
                     isDragTarget={dragOverIndex === index && draggedIndex !== index}
+                    isDarkTheme={isDarkTheme}
                   />
                 ))}
               </AnimatePresence>
@@ -626,10 +637,11 @@ export default function App() {
           onConvertAll={handleConvertAll}
           onDownloadZip={handleDownloadZip}
           onClearAll={handleClearAll}
+          isDarkTheme={isDarkTheme}
         />
 
         {/* Technical & Privacy Info Card */}
-        <PrivacyInfo />
+        <PrivacyInfo isDarkTheme={isDarkTheme} />
 
       </main>
 

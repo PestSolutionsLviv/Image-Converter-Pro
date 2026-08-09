@@ -8,6 +8,15 @@
   }
 }
 
+/* Hide scrollbar for clean mobile touch sliders */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Custom frosted glass scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
