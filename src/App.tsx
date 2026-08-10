@@ -14,6 +14,7 @@ import { CompareModal } from './components/CompareModal';
 import { BatchRenameModal } from './components/BatchRenameModal';
 import { ImageAdjustmentModal } from './components/ImageAdjustmentModal';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { LegalModal, LegalTab } from './components/LegalModal';
 import { PrivacyInfo } from './components/PrivacyInfo';
 import { UnitAndCurrencyConverter } from './components/UnitAndCurrencyConverter';
 
@@ -35,7 +36,7 @@ import {
 } from './lib/converter';
 import { createDemoPhotoFiles } from './lib/sampleFiles';
 import { getUserLocalData, saveUserLocalData } from './lib/userStorage';
-import { Image, Layers, Sparkles, Filter, RefreshCw, Type, Heart } from 'lucide-react';
+import { Image, Layers, Sparkles, Filter, RefreshCw, Type, Heart, ShieldCheck, Scale } from 'lucide-react';
 
 export default function App() {
   const [activeCategoryTab, setActiveCategoryTab] = useState<DropZoneTab>('photo');
@@ -49,6 +50,11 @@ export default function App() {
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [adjustingItem, setAdjustingItem] = useState<FileItem | null>(null);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [legalModalState, setLegalModalState] = useState<{ isOpen: boolean; tab: LegalTab }>({
+    isOpen: false,
+    tab: 'privacy',
+  });
+
 
   // Save theme changes locally in user cookies & localStorage
   useEffect(() => {
@@ -478,6 +484,7 @@ export default function App() {
         if (isRenameModalOpen) setIsRenameModalOpen(false);
         if (adjustingItem) setAdjustingItem(null);
         if (isShortcutsModalOpen) setIsShortcutsModalOpen(false);
+        if (legalModalState.isOpen) setLegalModalState((prev) => ({ ...prev, isOpen: false }));
         return;
       }
 
@@ -497,6 +504,8 @@ export default function App() {
     isRenameModalOpen,
     adjustingItem,
     isShortcutsModalOpen,
+    legalModalState,
+
     handleConvertAll,
     handleDownloadZip,
     handleClearAll,
@@ -689,6 +698,14 @@ export default function App() {
         onClose={() => setIsShortcutsModalOpen(false)}
       />
 
+      {/* Privacy Policy & Terms Modal */}
+      <LegalModal
+        isOpen={legalModalState.isOpen}
+        initialTab={legalModalState.tab}
+        onClose={() => setLegalModalState((prev) => ({ ...prev, isOpen: false }))}
+        isDarkTheme={isDarkTheme}
+      />
+
       {/* Footer */}
       <footer
         className={`relative z-10 border-t py-8 mt-12 text-center text-xs backdrop-blur-xl transition-colors duration-300 ${
@@ -697,7 +714,7 @@ export default function App() {
             : 'border-slate-200 bg-white/70 text-slate-600 shadow-sm'
         }`}
       >
-        <div className="max-w-3xl mx-auto px-4 flex flex-col items-center justify-center gap-2">
+        <div className="max-w-3xl mx-auto px-4 flex flex-col items-center justify-center gap-2.5">
           <p className={`font-bold text-sm tracking-wide ${isDarkTheme ? 'text-slate-200' : 'text-slate-800'}`}>
             © 2026 Universal Converter Pro
           </p>
@@ -717,11 +734,38 @@ export default function App() {
               <span>Підтримати проєкт (Monobank ☕)</span>
             </a>
           </div>
-          <p className={`text-xs ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
-            Локальна обробка без серверів
+
+          {/* Legal Navigation Links */}
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs pt-1">
+            <button
+              type="button"
+              onClick={() => setLegalModalState({ isOpen: true, tab: 'privacy' })}
+              className={`inline-flex items-center gap-1.5 font-semibold hover:underline transition-colors ${
+                isDarkTheme ? 'text-slate-300 hover:text-sky-300' : 'text-slate-600 hover:text-blue-600'
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              Політика конфіденційності
+            </button>
+            <span className={isDarkTheme ? 'text-slate-600' : 'text-slate-300'}>•</span>
+            <button
+              type="button"
+              onClick={() => setLegalModalState({ isOpen: true, tab: 'terms' })}
+              className={`inline-flex items-center gap-1.5 font-semibold hover:underline transition-colors ${
+                isDarkTheme ? 'text-slate-300 hover:text-sky-300' : 'text-slate-600 hover:text-blue-600'
+              }`}
+            >
+              <Scale className="w-3.5 h-3.5 text-blue-400" />
+              Умови використання
+            </button>
+          </div>
+
+          <p className={`text-xs mt-1 ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
+            100% локальна обробка у браузері без передачі файлів на сервери
           </p>
         </div>
       </footer>
+
 
     </div>
   );
