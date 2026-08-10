@@ -53,7 +53,7 @@ export function saveUserLocalData<T>(key: string, value: T): void {
   try {
     const jsonStr = JSON.stringify(value);
 
-    // 1. Save in localStorage with try/catch (handles Mobile Safari Private mode quota errors)
+    // 1. Save in localStorage with try/catch
     try {
       window.localStorage.setItem(key, jsonStr);
     } catch (e) {}
@@ -73,14 +73,12 @@ export function getUserLocalData<T>(key: string, fallback: T): T {
     try {
       const parsed = JSON.parse(raw);
       if (parsed !== undefined && parsed !== null) {
-        // If fallback is an array, ensure parsed is an array and filter out nulls/undefined
         if (Array.isArray(fallback)) {
           if (Array.isArray(parsed)) {
             return parsed.filter((item) => item && typeof item === 'object') as unknown as T;
           }
           return fallback;
         }
-        // If fallback is an object, merge with fallback to ensure no missing keys
         if (
           typeof fallback === 'object' &&
           fallback !== null &&
@@ -103,21 +101,21 @@ export function getUserLocalData<T>(key: string, fallback: T): T {
     return null;
   };
 
-  // 1. Try Cookie first
-  try {
-    const cookieVal = getCookie(key);
-    const fromCookie = tryParse(cookieVal);
-    if (fromCookie !== null && fromCookie !== undefined) {
-      return fromCookie;
-    }
-  } catch (e) {}
-
-  // 2. Fallback to localStorage
+  // 1. Try localStorage first (ultra fast native C++ key lookup)
   try {
     const localVal = window.localStorage.getItem(key);
     const fromLocal = tryParse(localVal);
     if (fromLocal !== null && fromLocal !== undefined) {
       return fromLocal;
+    }
+  } catch (e) {}
+
+  // 2. Fallback to Cookie
+  try {
+    const cookieVal = getCookie(key);
+    const fromCookie = tryParse(cookieVal);
+    if (fromCookie !== null && fromCookie !== undefined) {
+      return fromCookie;
     }
   } catch (e) {}
 

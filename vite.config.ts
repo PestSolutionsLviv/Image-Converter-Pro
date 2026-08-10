@@ -13,15 +13,9 @@ export default defineConfig(() => {
     },
     build: {
       target: 'es2020',
-      cssCodeSplit: true,
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom'],
-            'vendor-icons': ['lucide-react'],
-            'vendor-motion': ['motion'],
-          },
-        },
+      cssCodeSplit: false, // Single optimized CSS bundle for instant render without network waterfalls
+      modulePreload: {
+        polyfill: true,
       },
     },
     server: {
