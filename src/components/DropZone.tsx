@@ -71,7 +71,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
   const CATEGORY_TABS: { id: DropZoneTab; label: string; icon: React.ElementType; tag: string }[] = [
     { id: 'photo', label: 'Фото & RAW', icon: Camera, tag: 'HEIC, CR2, NEF, ARW, JPG, PNG' },
-    { id: 'text', label: 'Текст', icon: FileText, tag: 'PDF, TXT, MD, JSON, CSV, HTML' },
+    { id: 'text', label: 'Текст', icon: FileText, tag: 'DOCX, PDF, TXT, MD, JSON, CSV, HTML' },
     { id: 'video', label: 'Відео & Аудіо', icon: Video, tag: 'MP4, WEBM, MP3, WAV, OGG' },
     { id: 'units', label: 'Величини & Валюти', icon: Calculator, tag: 'Конвертер одиниць та курсів' },
   ];
@@ -160,7 +160,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/*,audio/*,video/*,text/*,.heic,.heif,.cr2,.cr3,.nef,.nrw,.arw,.dng,.orf,.rw2,.raf,.pef,.raw,.pdf,.txt,.md,.json,.csv,.html,.rtf,.mp3,.wav,.ogg,.m4a,.mp4,.webm,.mov,.avi"
+            accept="image/*,audio/*,video/*,text/*,.heic,.heif,.cr2,.cr3,.nef,.nrw,.arw,.dng,.orf,.rw2,.raf,.pef,.raw,.pdf,.txt,.md,.json,.csv,.html,.rtf,.docx,.doc,.mp3,.wav,.ogg,.m4a,.mp4,.webm,.mov,.avi"
             onChange={handleFileInputChange}
             className="hidden"
           />

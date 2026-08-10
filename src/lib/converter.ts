@@ -14,6 +14,11 @@ async function getJsPDF() {
   return (module.jsPDF || module.default || module) as typeof jsPDF;
 }
 
+async function getMammoth() {
+  const module = await import('mammoth/mammoth.browser');
+  return (module.default || module) as typeof import('mammoth');
+}
+
 async function getJSZip() {
   const module = await import('jszip');
   return (module.default || module) as unknown as typeof JSZip;
@@ -261,6 +266,15 @@ export function detectFileCategory(file: File): FileCategory {
     ].includes(ext)
   ) {
     return 'image';
+  }
+
+  // Word documents
+  if (
+    ext === 'docx' || ext === 'doc' ||
+    mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    mime === 'application/msword'
+  ) {
+    return 'document';
   }
 
   if (
@@ -560,6 +574,91 @@ export async function convertDocumentFile(
   targetFormat: TargetFormat,
   onProgress?: (p: number) => void
 ): Promise<Blob> {
+  const ext = item.name.split('.').pop()?.toLowerCase() || '';
+  const isDocx = ext === 'docx' || ext === 'doc' ||
+    item.file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    item.file.type === 'application/msword';
+
+  // --- DOCX handling via mammoth.js ---
+  if (isDocx) {
+    onProgress?.(15);
+    const mammoth = await getMammoth();
+    const arrayBuffer = await item.file.arrayBuffer();
+    onProgress?.(40);
+
+    if (targetFormat === 'txt') {
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      onProgress?.(100);
+      return new Blob([result.value], { type: 'text/plain;charset=utf-8' });
+    }
+
+    if (targetFormat === 'html') {
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+      const fullHtml = `<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${item.name}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.7; padding: 2.5rem; max-width: 860px; margin: 0 auto; color: #0f172a; background: #f8fafc; }
+    h1, h2, h3 { color: #0284c7; margin-top: 1.5rem; }
+    p { margin: 0.75rem 0; }
+    table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+    th, td { border: 1px solid #cbd5e1; padding: 0.5rem 0.75rem; }
+    th { background: #e2e8f0; font-weight: bold; }
+  </style>
+</head>
+<body>
+${result.value}
+</body>
+</html>`;
+      onProgress?.(100);
+      return new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+    }
+
+    if (targetFormat === 'md') {
+      const result = await mammoth.extractRawText({ arrayBuffer });
+      onProgress?.(100);
+      return new Blob([result.value], { type: 'text/markdown;charset=utf-8' });
+    }
+
+    // Default: PDF from DOCX
+    onProgress?.(50);
+    const htmlResult = await mammoth.convertToHtml({ arrayBuffer });
+    onProgress?.(65);
+    const JsPDFClass = await getJsPDF();
+    const pdf = new JsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    pdf.setFontSize(12);
+
+    // Strip HTML tags and render as plain text in PDF
+    const rawText = htmlResult.value
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<\/h[1-6]>/gi, '\n\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&quot;/g, '"');
+
+    pdf.setFontSize(14);
+    pdf.text(item.name.replace(/\.[^.]+$/, ''), 10, 15);
+    pdf.setFontSize(11);
+    const splitLines = pdf.splitTextToSize(rawText.trim(), 185);
+    let y = 28;
+    for (let i = 0; i < splitLines.length; i++) {
+      if (y > 280) { pdf.addPage(); y = 15; }
+      pdf.text(splitLines[i], 10, y);
+      y += 5.5;
+    }
+    onProgress?.(100);
+    const pdfBuffer = pdf.output('arraybuffer');
+    return new Blob([pdfBuffer], { type: 'application/pdf' });
+  }
+
+  // --- Plain text-based formats (TXT, MD, HTML, JSON, CSV, PDF) ---
   onProgress?.(20);
   const text = await item.file.text();
   onProgress?.(50);
