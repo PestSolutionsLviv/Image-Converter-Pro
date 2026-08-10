@@ -117,10 +117,13 @@ export const PrivacyInfo: React.FC<PrivacyInfoProps> = ({ isDarkTheme = true }) 
           isDarkTheme ? 'border-white/15 text-slate-300/80' : 'border-slate-200 text-slate-600'
         }`}
       >
-        <div className="flex items-center gap-2">
-          <Info className={`w-4 h-4 ${isDarkTheme ? 'text-sky-300' : 'text-blue-600'}`} />
-          <span>Підтримувані формати: HEIC, HEIF, JPG, JPEG, PNG, WebP, PDF, BMP, GIF, AVIF</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Info className={`w-4 h-4 shrink-0 ${isDarkTheme ? 'text-sky-300' : 'text-blue-600'}`} />
+          <span>
+            <strong className={isDarkTheme ? 'text-slate-200' : 'text-slate-800'}>Підтримувані формати:</strong> HEIC/HEIF, RAW (CR2/NEF/ARW/DNG), JPG, PNG, WebP, AVIF, SVG, PDF, TXT, MD, JSON, CSV, MP3, WAV, MP4, WEBM
+          </span>
         </div>
+
         <span
           className={`text-[11px] font-mono px-3 py-1 rounded-full border ${
             isDarkTheme
