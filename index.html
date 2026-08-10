@@ -6,6 +6,25 @@
     <meta name="theme-color" content="#0f172a" />
     <meta name="description" content="Універсальний локальний конвертер фотографій (HEIC, RAW, JPG, PNG, WebP), аудіо, відео, документів, а також конвертер величин та курсів валют 100% у браузері." />
     <title>Universal Converter Pro - Конвертер Зображень, Валют та Величин</title>
+
+    <script>
+      // Immediately unregister stale Service Workers & clear old CacheStorage in Safari
+      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for (var i = 0; i < registrations.length; i++) {
+            registrations[i].unregister();
+          }
+        }).catch(function() {});
+      }
+      if (typeof window !== 'undefined' && 'caches' in window) {
+        caches.keys().then(function(keys) {
+          for (var i = 0; i < keys.length; i++) {
+            caches.delete(keys[i]);
+          }
+        }).catch(function() {});
+      }
+    </script>
+
     <style>
       html, body {
         margin: 0;

@@ -13,10 +13,6 @@ export default defineConfig(() => {
     },
     build: {
       target: 'es2020',
-      cssCodeSplit: false, // Single optimized CSS bundle for instant render without network waterfalls
-      modulePreload: {
-        polyfill: true,
-      },
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
