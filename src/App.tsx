@@ -34,11 +34,14 @@ import {
   detectFileCategory,
 } from './lib/converter';
 import { createDemoPhotoFiles } from './lib/sampleFiles';
+import { getUserLocalData, saveUserLocalData } from './lib/userStorage';
 import { Image, Layers, Sparkles, Filter, RefreshCw, Type, Heart } from 'lucide-react';
 
 export default function App() {
   const [activeCategoryTab, setActiveCategoryTab] = useState<DropZoneTab>('photo');
-  const [isDarkTheme, setIsDarkTheme] = useState<boolean>(true);
+  const [isDarkTheme, setIsDarkTheme] = useState<boolean>(() => {
+    return getUserLocalData<boolean>('converter_theme', true);
+  });
   const [items, setItems] = useState<FileItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isProcessingDemo, setIsProcessingDemo] = useState(false);
@@ -47,22 +50,35 @@ export default function App() {
   const [adjustingItem, setAdjustingItem] = useState<FileItem | null>(null);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
 
+  // Save theme changes locally in user cookies & localStorage
+  useEffect(() => {
+    saveUserLocalData('converter_theme', isDarkTheme);
+  }, [isDarkTheme]);
+
   // Drag and drop reordering state
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  const [globalSettings, setGlobalSettings] = useState<ConversionSettings>({
-    targetFormat: 'jpeg',
-    documentTargetFormat: 'pdf',
-    audioTargetFormat: 'wav',
-    videoTargetFormat: 'mp4_audio',
-    quality: 0.88,
-    resizeMode: 'original',
-    backgroundColor: '#ffffff',
-    preserveAspectRatio: true,
-    preserveExif: true,
-    autoDownloadZip: false,
+  const [globalSettings, setGlobalSettings] = useState<ConversionSettings>(() => {
+    return getUserLocalData<ConversionSettings>('converter_global_settings', {
+      targetFormat: 'jpeg',
+      documentTargetFormat: 'pdf',
+      audioTargetFormat: 'wav',
+      videoTargetFormat: 'mp4_audio',
+      quality: 0.88,
+      resizeMode: 'original',
+      backgroundColor: '#ffffff',
+      preserveAspectRatio: true,
+      preserveExif: true,
+      autoDownloadZip: false,
+    });
   });
+
+  // Save global settings locally in user cookies & localStorage
+  useEffect(() => {
+    saveUserLocalData('converter_global_settings', globalSettings);
+  }, [globalSettings]);
+
 
   // Handle files added (drag & drop or picker)
   const handleFilesAdded = useCallback(

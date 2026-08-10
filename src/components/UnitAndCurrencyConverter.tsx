@@ -28,7 +28,10 @@ import {
   Download,
   Upload,
   History,
+  Lock,
 } from 'lucide-react';
+import { getUserLocalData, saveUserLocalData } from '../lib/userStorage';
+
 
 // --- TYPES ---
 export type UnitCategoryKey =
@@ -384,36 +387,14 @@ export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> =
     fetchLiveRates();
   }, []);
 
-  // --- PRESETS STATE & LOCAL STORAGE ---
+  // --- PRESETS STATE & LOCAL STORAGE (COOKIES + LOCALSTORAGE) ---
   const [presets, setPresets] = useState<ConversionPreset[]>(() => {
-    try {
-      const saved = localStorage.getItem('converter_presets');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.warn('Could not read converter_presets from localStorage', e);
-    }
-    return DEFAULT_PRESETS;
+    return getUserLocalData<ConversionPreset[]>('converter_presets', []);
   });
 
   // --- RECENT CONVERSIONS HISTORY STATE ---
   const [recentHistory, setRecentHistory] = useState<RecentConversion[]>(() => {
-    try {
-      const saved = localStorage.getItem('converter_recent_history');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.warn('Could not read converter_recent_history from localStorage', e);
-    }
-    return [];
+    return getUserLocalData<RecentConversion[]>('converter_recent_history', []);
   });
 
   const [savedTab, setSavedTab] = useState<'presets' | 'history'>('presets');
@@ -424,20 +405,13 @@ export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> =
   const [currencySwapRotation, setCurrencySwapRotation] = useState(0);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('converter_presets', JSON.stringify(presets));
-    } catch (e) {
-      console.warn('Could not save converter_presets to localStorage', e);
-    }
+    saveUserLocalData('converter_presets', presets);
   }, [presets]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('converter_recent_history', JSON.stringify(recentHistory));
-    } catch (e) {
-      console.warn('Could not save converter_recent_history to localStorage', e);
-    }
+    saveUserLocalData('converter_recent_history', recentHistory);
   }, [recentHistory]);
+
 
   const presetCounts = useMemo(() => {
     const counts: Record<string, number> = { all: presets.length, currencies: 0 };
@@ -1064,10 +1038,27 @@ export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> =
         {savedTab === 'presets' && (
           <div>
             {presets.length === 0 ? (
-              <p className={`text-xs italic ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
-                Немає збережених пресетів. Натисніть "+ Зберегти", щоб додати швидкий доступ.
-              </p>
+              <div className={`p-4 rounded-2xl border text-center space-y-2.5 transition-colors ${isDarkTheme ? 'bg-black/30 border-white/10' : 'bg-slate-100/80 border-slate-200'}`}>
+                <p className={`text-xs leading-relaxed ${isDarkTheme ? 'text-slate-300' : 'text-slate-600'}`}>
+                  🔒 <b>Усі збережені пресети зберігаються 100% локально на вашому пристрої</b> у кукі (Cookies) та LocalStorage вашого браузера. Вони не передаються на сервер і доступні виключно вам.
+                </p>
+                <div className="flex items-center justify-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setPresets(DEFAULT_PRESETS)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all active:scale-95 ${
+                      isDarkTheme
+                        ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border-amber-400/30'
+                        : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                    Завантажити початкові приклади (5 пресетів)
+                  </button>
+                </div>
+              </div>
             ) : (
+
               <div>
                 {/* Category Filter Selector */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-3 scrollbar-none">
