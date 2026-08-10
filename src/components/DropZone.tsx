@@ -80,10 +80,10 @@ export const DropZone: React.FC<DropZoneProps> = ({
     <div className="space-y-4">
       {/* Categories Selector Navigation Bar */}
       <div
-        className={`grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center sm:justify-start gap-2 p-2 rounded-[24px] border backdrop-blur-2xl transition-colors duration-300 ${
+        className={`grid grid-cols-2 lg:grid-cols-4 items-stretch gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-[28px] border backdrop-blur-3xl transition-all duration-300 ${
           isDarkTheme
-            ? 'bg-white/[0.05] border-white/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)]'
-            : 'bg-white/80 border-slate-200/90 shadow-sm'
+            ? 'bg-slate-900/70 border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)]'
+            : 'bg-white/90 border-slate-200 shadow-md shadow-slate-200/50'
         }`}
       >
         {CATEGORY_TABS.map((tab) => {
@@ -94,31 +94,35 @@ export const DropZone: React.FC<DropZoneProps> = ({
               key={tab.id}
               type="button"
               onClick={() => onTabChange(tab.id)}
-              className={`flex items-center gap-2 sm:gap-2.5 px-3 sm:px-5 py-2.5 rounded-[18px] text-xs font-bold transition-all active:scale-95 w-full sm:w-auto ${
+              className={`relative flex items-center gap-3 px-3.5 sm:px-5 py-3 sm:py-3.5 rounded-[20px] text-left transition-all duration-300 active:scale-95 group ${
                 isActive
-                  ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white border border-blue-300/40 shadow-[0_8px_20px_rgba(37,99,235,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)]'
+                  ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-sky-500 text-white border border-blue-300/50 shadow-[0_10px_28px_rgba(37,99,235,0.45),inset_0_1px_1px_rgba(255,255,255,0.5)] scale-[1.02]'
                   : isDarkTheme
-                  ? 'text-slate-300 hover:text-white hover:bg-white/10 border border-transparent'
-                  : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-transparent'
+                  ? 'bg-white/[0.04] text-slate-200 hover:text-white hover:bg-white/[0.09] border border-white/10 hover:border-white/20'
+                  : 'bg-slate-100/80 text-slate-800 hover:text-slate-950 hover:bg-slate-200/90 border border-slate-200/80'
               }`}
             >
-              <Icon
-                className={`w-4 h-4 flex-shrink-0 ${
+              <div
+                className={`p-2 sm:p-2.5 rounded-xl flex-shrink-0 transition-transform duration-300 group-hover:scale-110 ${
                   isActive
-                    ? 'text-sky-100'
+                    ? 'bg-white/20 text-white shadow-inner'
                     : isDarkTheme
-                    ? 'text-slate-400'
-                    : 'text-slate-500'
+                    ? 'bg-blue-500/15 text-blue-400 border border-blue-400/20'
+                    : 'bg-blue-100 text-blue-600 border border-blue-200'
                 }`}
-              />
-              <div className="text-left min-w-0 flex-1">
-                <div className="leading-tight truncate">{tab.label}</div>
+              >
+                <Icon className="w-5 h-5 sm:w-5 sm:h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm sm:text-base font-extrabold tracking-tight leading-tight truncate">
+                  {tab.label}
+                </div>
                 <div
-                  className={`text-[10px] font-normal truncate ${
+                  className={`text-xs font-medium truncate mt-0.5 ${
                     isActive
                       ? 'text-sky-100/90'
                       : isDarkTheme
-                      ? 'text-slate-400/80'
+                      ? 'text-slate-400/90'
                       : 'text-slate-500'
                   }`}
                 >
@@ -129,6 +133,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
           );
         })}
       </div>
+
 
       {/* Drop Zone Box (Only for file-based categories) */}
       {activeTab !== 'units' && (

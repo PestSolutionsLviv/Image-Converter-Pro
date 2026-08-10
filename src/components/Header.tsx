@@ -171,7 +171,7 @@ export const Header: React.FC<HeaderProps> = ({
                       Категорії інструментів
                     </span>
 
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-1 gap-2.5">
                       {CATEGORIES.map((cat) => {
                         const Icon = cat.icon;
                         const isActive = activeTab === cat.id;
@@ -184,28 +184,39 @@ export const Header: React.FC<HeaderProps> = ({
                               onTabChange(cat.id);
                               setIsMenuOpen(false);
                             }}
-                            className={`flex items-center justify-between p-3 rounded-2xl border text-left transition-all active:scale-95 ${
+                            className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all active:scale-95 ${
                               isActive
-                                ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white border-blue-300/40 shadow-lg'
+                                ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white border-blue-300/40 shadow-lg shadow-blue-500/25'
                                 : isDarkTheme
                                 ? 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200'
                                 : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800'
                             }`}
                           >
-                            <div className="flex items-center gap-3">
-                              <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-blue-400'}`} />
-                              <div>
-                                <div className="text-xs font-bold">{cat.label}</div>
-                                <div className={`text-[10px] ${isActive ? 'text-sky-100' : 'text-slate-400'}`}>
+                            <div className="flex items-center gap-3.5 min-w-0">
+                              <div
+                                className={`p-2 rounded-xl flex-shrink-0 ${
+                                  isActive
+                                    ? 'bg-white/20 text-white'
+                                    : isDarkTheme
+                                    ? 'bg-blue-500/15 text-blue-400 border border-blue-400/20'
+                                    : 'bg-blue-100 text-blue-600 border border-blue-200'
+                                }`}
+                              >
+                                <Icon className="w-5 h-5" />
+                              </div>
+                              <div className="min-w-0">
+                                <div className="text-sm font-extrabold tracking-tight">{cat.label}</div>
+                                <div className={`text-xs truncate ${isActive ? 'text-sky-100' : 'text-slate-400'}`}>
                                   {cat.tag}
                                 </div>
                               </div>
                             </div>
-                            {isActive && <div className="w-2 h-2 rounded-full bg-white shadow-sm" />}
+                            {isActive && <div className="w-2.5 h-2.5 rounded-full bg-white shadow-md animate-pulse shrink-0 ml-2" />}
                           </button>
                         );
                       })}
                     </div>
+
                   </div>
                 )}
 
