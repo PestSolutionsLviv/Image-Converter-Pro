@@ -24,6 +24,10 @@ async function getJSZip() {
   return (module.default || module) as unknown as typeof JSZip;
 }
 
+async function getDocxPreview() {
+  return await import('docx-preview');
+}
+
 export const SUPPORTED_FORMATS: FormatOption[] = [
   // Images
   {
@@ -623,95 +627,93 @@ ${result.value}
       return new Blob([result.value], { type: 'text/markdown;charset=utf-8' });
     }
 
-    // Default: PDF from DOCX — use html2canvas to render Cyrillic/Unicode text correctly
+    // Default: PDF from DOCX — use docx-preview to render exact MS Word layout, tables, fonts & images
+    onProgress?.(30);
+    const docxPreview = await getDocxPreview();
+    const { default: html2canvas } = await import('html2canvas');
+    const JsPDFClass = await getJsPDF();
     onProgress?.(50);
-    const htmlResult = await mammoth.convertToHtml({ arrayBuffer });
-    onProgress?.(60);
 
-    // Build a complete styled HTML document and render with browser fonts (supports Cyrillic)
-    const pageHtml = `<!DOCTYPE html>
-<html lang="uk">
-<head>
-  <meta charset="UTF-8">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Times New Roman', Georgia, serif;
-      font-size: 13px;
-      line-height: 1.65;
-      color: #000;
-      background: #fff;
-      padding: 40px 50px;
-      width: 794px;
-    }
-    h1 { font-size: 18px; margin: 16px 0 8px; }
-    h2 { font-size: 15px; margin: 14px 0 6px; }
-    h3 { font-size: 13px; margin: 10px 0 4px; }
-    p  { margin: 6px 0; }
-    ul, ol { padding-left: 24px; margin: 6px 0; }
-    li { margin: 3px 0; }
-    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-    th, td { border: 1px solid #888; padding: 4px 8px; font-size: 12px; }
-    th { background: #eee; font-weight: bold; }
-    strong, b { font-weight: bold; }
-    em, i { font-style: italic; }
-  </style>
-</head>
-<body>${htmlResult.value}</body>
-</html>`;
-
-    // Render HTML to canvas using html2canvas (uses browser native font renderer — Cyrillic support)
     const container = document.createElement('div');
     container.style.position = 'fixed';
     container.style.left = '-9999px';
     container.style.top = '0';
-    container.style.width = '794px';
-    container.style.background = '#fff';
-    container.innerHTML = pageHtml;
+    container.style.width = '816px';
+    container.style.background = '#ffffff';
+    container.style.color = '#000000';
+    container.style.zIndex = '-9999';
     document.body.appendChild(container);
 
     try {
-      const { default: html2canvas } = await import('html2canvas');
-      onProgress?.(70);
+      await docxPreview.renderAsync(arrayBuffer, container, undefined, {
+        inWrapper: true,
+        ignoreWidth: false,
+        ignoreHeight: false,
+        ignoreFonts: false,
+        breakPages: true,
+        useBase64URL: true,
+        renderHeaders: true,
+        renderFooters: true,
+        renderFootnotes: true,
+        renderEndnotes: true,
+      });
 
-      const canvas = await html2canvas(container, {
-        scale: 2,
+      onProgress?.(75);
+
+      const targetElement = (container.querySelector('.docx-wrapper') as HTMLElement) || container;
+
+      const canvas = await html2canvas(targetElement, {
+        scale: 1.5,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
-        width: 794,
       });
-      onProgress?.(88);
 
-      // A4 dimensions in mm
-      const a4Width = 210;
-      const a4Height = 297;
-      const JsPDFClass = await getJsPDF();
+      onProgress?.(85);
+
       const pdf = new JsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const a4WidthMm = 210;
+      const a4HeightMm = 297;
 
-      const imgData = canvas.toDataURL('image/png');
-      const canvasWidthMm = a4Width;
-      const canvasHeightMm = (canvas.height * a4Width) / canvas.width;
+      const fullCtx = canvas.getContext('2d')!;
+      const pageHeightPx = Math.floor((a4HeightMm / a4WidthMm) * canvas.width);
+      let currentY = 0;
+      let pageIndex = 0;
 
-      let yOffset = 0;
-      while (yOffset < canvasHeightMm) {
-        if (yOffset > 0) pdf.addPage();
-        const srcY = (yOffset / canvasHeightMm) * canvas.height;
+      while (currentY < canvas.height) {
+        let nextY = Math.min(currentY + pageHeightPx, canvas.height);
+
+        // If not the last page, find a clean horizontal white-space line to break on
+        if (nextY < canvas.height) {
+          const minY = currentY + Math.floor(pageHeightPx * 0.75);
+          nextY = findCleanBreakY(fullCtx, canvas.width, nextY, minY);
+        }
+
+        const sliceHeightPx = nextY - currentY;
+        if (sliceHeightPx <= 0) break;
+
+        if (pageIndex > 0) pdf.addPage();
+
         const pageCanvas = document.createElement('canvas');
-        const pageHeightPx = Math.min(
-          canvas.height - srcY,
-          (a4Height / canvasHeightMm) * canvas.height
-        );
         pageCanvas.width = canvas.width;
-        pageCanvas.height = Math.ceil(pageHeightPx);
+        pageCanvas.height = sliceHeightPx;
+
         const ctx = pageCanvas.getContext('2d')!;
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        ctx.drawImage(canvas, 0, -srcY);
-        const pageImg = pageCanvas.toDataURL('image/png');
-        const pageRenderedHeightMm = (pageCanvas.height / canvas.height) * canvasHeightMm;
-        pdf.addImage(pageImg, 'PNG', 0, 0, canvasWidthMm, pageRenderedHeightMm);
-        yOffset += a4Height;
+        ctx.drawImage(
+          canvas,
+          0, currentY, canvas.width, sliceHeightPx,
+          0, 0, canvas.width, sliceHeightPx
+        );
+
+        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.92);
+        const sliceHeightMm = (sliceHeightPx / canvas.width) * a4WidthMm;
+
+        pdf.addImage(pageImgData, 'JPEG', 0, 0, a4WidthMm, sliceHeightMm);
+
+        currentY = nextY;
+        pageIndex++;
       }
 
       onProgress?.(100);
@@ -721,6 +723,50 @@ ${result.value}
       document.body.removeChild(container);
     }
   }
+
+/**
+ * Finds a clean horizontal break (pure white row) near targetY to avoid slicing text/table lines.
+ */
+function findCleanBreakY(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  targetY: number,
+  minY: number
+): number {
+  if (targetY <= minY) return targetY;
+
+  const searchWindow = Math.min(120, targetY - minY);
+  const startY = targetY - searchWindow;
+  const imgData = ctx.getImageData(0, startY, width, searchWindow);
+  const data = imgData.data;
+
+  let bestY = targetY;
+  let maxWhiteCount = -1;
+
+  for (let r = searchWindow - 1; r >= 0; r--) {
+    let whiteCount = 0;
+    const rowStart = r * width * 4;
+
+    for (let c = 0; c < width; c += 4) {
+      const idx = rowStart + c * 4;
+      if (data[idx] > 240 && data[idx + 1] > 240 && data[idx + 2] > 240) {
+        whiteCount++;
+      }
+    }
+
+    // 97%+ white row -> perfect clean gap between lines/paragraphs
+    if (whiteCount >= Math.floor((width / 4) * 0.97)) {
+      return startY + r;
+    }
+
+    if (whiteCount > maxWhiteCount) {
+      maxWhiteCount = whiteCount;
+      bestY = startY + r;
+    }
+  }
+
+  return bestY;
+}
 
 
   // --- Plain text-based formats (TXT, MD, HTML, JSON, CSV, PDF) ---
