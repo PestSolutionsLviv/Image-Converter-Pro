@@ -11,15 +11,16 @@ import { GlobalSettings } from './components/GlobalSettings';
 import { FileCard } from './components/FileCard';
 import { BatchActions } from './components/BatchActions';
 import { PrivacyInfo } from './components/PrivacyInfo';
-import { UnitAndCurrencyConverter } from './components/UnitAndCurrencyConverter';
 import type { LegalTab } from './components/LegalModal';
 
-// Code-split heavy modals for instant mobile initial load
+// Code-split heavy modals and subcomponents for instant mobile initial load
+const UnitAndCurrencyConverter = React.lazy(() => import('./components/UnitAndCurrencyConverter').then(m => ({ default: m.UnitAndCurrencyConverter })));
 const CompareModal = React.lazy(() => import('./components/CompareModal').then(m => ({ default: m.CompareModal })));
 const BatchRenameModal = React.lazy(() => import('./components/BatchRenameModal').then(m => ({ default: m.BatchRenameModal })));
 const ImageAdjustmentModal = React.lazy(() => import('./components/ImageAdjustmentModal').then(m => ({ default: m.ImageAdjustmentModal })));
 const KeyboardShortcutsModal = React.lazy(() => import('./components/KeyboardShortcutsModal').then(m => ({ default: m.KeyboardShortcutsModal })));
 const LegalModal = React.lazy(() => import('./components/LegalModal').then(m => ({ default: m.LegalModal })));
+
 
 
 import {
@@ -575,12 +576,15 @@ export default function App() {
         {/* Units and Currency Converter View */}
         {activeCategoryTab === 'units' && (
           <div className="pt-2">
-            <UnitAndCurrencyConverter
-              isDarkTheme={isDarkTheme}
-              onToggleTheme={() => setIsDarkTheme((prev) => !prev)}
-            />
+            <React.Suspense fallback={<div className="p-12 text-center text-xs font-semibold text-slate-400">Завантаження конвертера величин...</div>}>
+              <UnitAndCurrencyConverter
+                isDarkTheme={isDarkTheme}
+                onToggleTheme={() => setIsDarkTheme((prev) => !prev)}
+              />
+            </React.Suspense>
           </div>
         )}
+
 
         {/* Global Settings Panel */}
         {items.length > 0 && (
