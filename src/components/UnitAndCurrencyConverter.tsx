@@ -359,29 +359,48 @@ export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> =
   const [isFetchingRates, setIsFetchingRates] = useState<boolean>(false);
   const [copiedCurrency, setCopiedCurrency] = useState(false);
 
-  // Fetch live exchange rates on mount or refresh
+  // Fetch live exchange rates on mount or refresh (with 12-hour local cache & 2.0s network timeout)
   const fetchLiveRates = async () => {
+    // 1. Check 12-hour local cache
+    const cachedRates = getUserLocalData<Record<string, number> | null>('currency_rates_cache', null);
+    const cachedTime = getUserLocalData<number>('currency_rates_time', 0);
+    if (cachedRates && cachedTime && Date.now() - cachedTime < 12 * 60 * 60 * 1000) {
+      setRates(cachedRates);
+      const timeStr = new Date(cachedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      setLastRateUpdate(`Курси з кешу (${timeStr})`);
+      return;
+    }
+
     setIsFetchingRates(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2.0s max timeout
+
     try {
-      const res = await fetch('https://open.er-api.com/v6/latest/USD');
+      const res = await fetch('https://open.er-api.com/v6/latest/USD', { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
         if (data && data.rates) {
-          setRates({
+          const updatedRates = {
             ...DEFAULT_RATES_USD,
             ...data.rates,
-          });
+          };
+          setRates(updatedRates);
+          saveUserLocalData('currency_rates_cache', updatedRates);
+          saveUserLocalData('currency_rates_time', Date.now());
           const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           setLastRateUpdate(`Оновлено сьогодні о ${timeStr}`);
         }
       }
     } catch (e) {
+      clearTimeout(timeoutId);
       console.warn('Could not fetch live currency rates, using fallback rates', e);
       setLastRateUpdate('Автономний режим');
     } finally {
       setIsFetchingRates(false);
     }
   };
+
 
   useEffect(() => {
     fetchLiveRates();

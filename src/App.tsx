@@ -10,13 +10,17 @@ import { DropZone, DropZoneTab } from './components/DropZone';
 import { GlobalSettings } from './components/GlobalSettings';
 import { FileCard } from './components/FileCard';
 import { BatchActions } from './components/BatchActions';
-import { CompareModal } from './components/CompareModal';
-import { BatchRenameModal } from './components/BatchRenameModal';
-import { ImageAdjustmentModal } from './components/ImageAdjustmentModal';
-import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
-import { LegalModal, LegalTab } from './components/LegalModal';
 import { PrivacyInfo } from './components/PrivacyInfo';
 import { UnitAndCurrencyConverter } from './components/UnitAndCurrencyConverter';
+import type { LegalTab } from './components/LegalModal';
+
+// Code-split heavy modals for instant mobile initial load
+const CompareModal = React.lazy(() => import('./components/CompareModal').then(m => ({ default: m.CompareModal })));
+const BatchRenameModal = React.lazy(() => import('./components/BatchRenameModal').then(m => ({ default: m.BatchRenameModal })));
+const ImageAdjustmentModal = React.lazy(() => import('./components/ImageAdjustmentModal').then(m => ({ default: m.ImageAdjustmentModal })));
+const KeyboardShortcutsModal = React.lazy(() => import('./components/KeyboardShortcutsModal').then(m => ({ default: m.KeyboardShortcutsModal })));
+const LegalModal = React.lazy(() => import('./components/LegalModal').then(m => ({ default: m.LegalModal })));
+
 
 import {
   ConversionSettings,
@@ -673,41 +677,54 @@ export default function App() {
 
       </main>
 
-      {/* Compare Before/After Modal */}
-      <CompareModal
-        item={compareItem}
-        onClose={() => setCompareItem(null)}
-      />
+      <React.Suspense fallback={null}>
+        {/* Compare Before/After Modal */}
+        {compareItem && (
+          <CompareModal
+            item={compareItem}
+            onClose={() => setCompareItem(null)}
+          />
+        )}
 
-      {/* Batch Rename Modal */}
-      <BatchRenameModal
-        items={items}
-        isOpen={isRenameModalOpen}
-        onClose={() => setIsRenameModalOpen(false)}
-        onApplyRename={handleApplyBatchRename}
-      />
+        {/* Batch Rename Modal */}
+        {isRenameModalOpen && (
+          <BatchRenameModal
+            items={items}
+            isOpen={isRenameModalOpen}
+            onClose={() => setIsRenameModalOpen(false)}
+            onApplyRename={handleApplyBatchRename}
+          />
+        )}
 
-      {/* Image Adjustments Modal */}
-      <ImageAdjustmentModal
-        item={adjustingItem}
-        isOpen={!!adjustingItem}
-        onClose={() => setAdjustingItem(null)}
-        onSaveAdjustments={handleSaveAdjustments}
-      />
+        {/* Image Adjustments Modal */}
+        {adjustingItem && (
+          <ImageAdjustmentModal
+            item={adjustingItem}
+            isOpen={!!adjustingItem}
+            onClose={() => setAdjustingItem(null)}
+            onSaveAdjustments={handleSaveAdjustments}
+          />
+        )}
 
-      {/* Keyboard Shortcuts Modal */}
-      <KeyboardShortcutsModal
-        isOpen={isShortcutsModalOpen}
-        onClose={() => setIsShortcutsModalOpen(false)}
-      />
+        {/* Keyboard Shortcuts Modal */}
+        {isShortcutsModalOpen && (
+          <KeyboardShortcutsModal
+            isOpen={isShortcutsModalOpen}
+            onClose={() => setIsShortcutsModalOpen(false)}
+          />
+        )}
 
-      {/* Privacy Policy & Terms Modal */}
-      <LegalModal
-        isOpen={legalModalState.isOpen}
-        initialTab={legalModalState.tab}
-        onClose={() => setLegalModalState((prev) => ({ ...prev, isOpen: false }))}
-        isDarkTheme={isDarkTheme}
-      />
+        {/* Privacy Policy & Terms Modal */}
+        {legalModalState.isOpen && (
+          <LegalModal
+            isOpen={legalModalState.isOpen}
+            initialTab={legalModalState.tab}
+            onClose={() => setLegalModalState((prev) => ({ ...prev, isOpen: false }))}
+            isDarkTheme={isDarkTheme}
+          />
+        )}
+      </React.Suspense>
+
 
       {/* Footer */}
       <footer
