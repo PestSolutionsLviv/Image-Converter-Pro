@@ -36,7 +36,9 @@ import {
 } from './lib/converter';
 import { createDemoPhotoFiles } from './lib/sampleFiles';
 import { getUserLocalData, saveUserLocalData } from './lib/userStorage';
-import { Image, Layers, Sparkles, Filter, RefreshCw, Type, Heart, ShieldCheck, Scale, Phone, Mail } from 'lucide-react';
+import { ProtectedContact } from './components/ProtectedContact';
+import { Image, Layers, Sparkles, Filter, RefreshCw, Type, Heart, ShieldCheck, Scale } from 'lucide-react';
+
 
 
 export default function App() {
@@ -725,23 +727,17 @@ export default function App() {
               <span className="font-bold text-blue-500">Салдан Тарас</span>
             </p>
             <span className={isDarkTheme ? 'text-slate-700' : 'text-slate-300'}>•</span>
-            <a
-              href="tel:+380676706402"
+            <ProtectedContact
+              type="phone"
               className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-500 hover:text-emerald-400 hover:underline transition-colors"
               title="Зателефонувати розробнику"
-            >
-              <Phone className="w-3.5 h-3.5 text-emerald-500" />
-              <span>+38 067 670 64 02</span>
-            </a>
+            />
             <span className={isDarkTheme ? 'text-slate-700' : 'text-slate-300'}>•</span>
-            <a
-              href="mailto:saldan1978@gmail.com"
+            <ProtectedContact
+              type="email"
               className="inline-flex items-center gap-1 text-xs font-semibold text-sky-400 hover:text-sky-300 hover:underline transition-colors"
               title="Написати листа розробнику"
-            >
-              <Mail className="w-3.5 h-3.5 text-sky-400" />
-              <span>saldan1978@gmail.com</span>
-            </a>
+            />
 
             <a
               href="https://send.monobank.ua/"
@@ -754,6 +750,7 @@ export default function App() {
               <span>Підтримати проєкт (Monobank ☕)</span>
             </a>
           </div>
+
 
 
           {/* Legal Navigation Links */}

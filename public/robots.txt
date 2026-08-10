@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Prevent search engine crawlers & spam bots from scraping mailto & phone parameter endpoints
+Disallow: /*mailto*
+Disallow: /*tel*
+Disallow: /*?*contact=

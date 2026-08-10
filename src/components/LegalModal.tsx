@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, FileText, X, Scale, Lock, HardDrive, CheckCircle2, AlertTriangle, ExternalLink, Phone, Mail } from 'lucide-react';
+import { ShieldCheck, FileText, X, Scale, Lock, HardDrive, CheckCircle2, AlertTriangle, ExternalLink } from 'lucide-react';
+import { ProtectedContact } from './ProtectedContact';
 
 export type LegalTab = 'privacy' | 'terms';
+
 
 
 interface LegalModalProps {
@@ -266,22 +268,19 @@ export const LegalModal: React.FC<LegalModalProps> = ({
             <span className={isDarkTheme ? 'text-slate-300/80' : 'text-slate-600'}>З питань та пропозицій:</span>
             <span className="font-bold text-blue-400">Салдан Тарас</span>
             <span className={isDarkTheme ? 'text-slate-600' : 'text-slate-300'}>•</span>
-            <a
-              href="tel:+380676706402"
+            <ProtectedContact
+              type="phone"
               className="inline-flex items-center gap-1 font-semibold text-emerald-400 hover:text-emerald-300 hover:underline transition-colors"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              <span>+38 067 670 64 02</span>
-            </a>
+              title="Зателефонувати розробнику"
+            />
             <span className={isDarkTheme ? 'text-slate-600' : 'text-slate-300'}>•</span>
-            <a
-              href="mailto:saldan1978@gmail.com"
+            <ProtectedContact
+              type="email"
               className="inline-flex items-center gap-1 font-semibold text-sky-400 hover:text-sky-300 hover:underline transition-colors"
-            >
-              <Mail className="w-3.5 h-3.5" />
-              <span>saldan1978@gmail.com</span>
-            </a>
+              title="Написати листа розробнику"
+            />
           </div>
+
 
           <button
             type="button"
