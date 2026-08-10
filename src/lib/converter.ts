@@ -623,40 +623,105 @@ ${result.value}
       return new Blob([result.value], { type: 'text/markdown;charset=utf-8' });
     }
 
-    // Default: PDF from DOCX
+    // Default: PDF from DOCX — use html2canvas to render Cyrillic/Unicode text correctly
     onProgress?.(50);
     const htmlResult = await mammoth.convertToHtml({ arrayBuffer });
-    onProgress?.(65);
-    const JsPDFClass = await getJsPDF();
-    const pdf = new JsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    pdf.setFontSize(12);
+    onProgress?.(60);
 
-    // Strip HTML tags and render as plain text in PDF
-    const rawText = htmlResult.value
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<\/p>/gi, '\n')
-      .replace(/<\/h[1-6]>/gi, '\n\n')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&quot;/g, '"');
-
-    pdf.setFontSize(14);
-    pdf.text(item.name.replace(/\.[^.]+$/, ''), 10, 15);
-    pdf.setFontSize(11);
-    const splitLines = pdf.splitTextToSize(rawText.trim(), 185);
-    let y = 28;
-    for (let i = 0; i < splitLines.length; i++) {
-      if (y > 280) { pdf.addPage(); y = 15; }
-      pdf.text(splitLines[i], 10, y);
-      y += 5.5;
+    // Build a complete styled HTML document and render with browser fonts (supports Cyrillic)
+    const pageHtml = `<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Times New Roman', Georgia, serif;
+      font-size: 13px;
+      line-height: 1.65;
+      color: #000;
+      background: #fff;
+      padding: 40px 50px;
+      width: 794px;
     }
-    onProgress?.(100);
-    const pdfBuffer = pdf.output('arraybuffer');
-    return new Blob([pdfBuffer], { type: 'application/pdf' });
+    h1 { font-size: 18px; margin: 16px 0 8px; }
+    h2 { font-size: 15px; margin: 14px 0 6px; }
+    h3 { font-size: 13px; margin: 10px 0 4px; }
+    p  { margin: 6px 0; }
+    ul, ol { padding-left: 24px; margin: 6px 0; }
+    li { margin: 3px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+    th, td { border: 1px solid #888; padding: 4px 8px; font-size: 12px; }
+    th { background: #eee; font-weight: bold; }
+    strong, b { font-weight: bold; }
+    em, i { font-style: italic; }
+  </style>
+</head>
+<body>${htmlResult.value}</body>
+</html>`;
+
+    // Render HTML to canvas using html2canvas (uses browser native font renderer — Cyrillic support)
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '794px';
+    container.style.background = '#fff';
+    container.innerHTML = pageHtml;
+    document.body.appendChild(container);
+
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      onProgress?.(70);
+
+      const canvas = await html2canvas(container, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        width: 794,
+      });
+      onProgress?.(88);
+
+      // A4 dimensions in mm
+      const a4Width = 210;
+      const a4Height = 297;
+      const JsPDFClass = await getJsPDF();
+      const pdf = new JsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      const imgData = canvas.toDataURL('image/png');
+      const canvasWidthMm = a4Width;
+      const canvasHeightMm = (canvas.height * a4Width) / canvas.width;
+
+      let yOffset = 0;
+      while (yOffset < canvasHeightMm) {
+        if (yOffset > 0) pdf.addPage();
+        const srcY = (yOffset / canvasHeightMm) * canvas.height;
+        const pageCanvas = document.createElement('canvas');
+        const pageHeightPx = Math.min(
+          canvas.height - srcY,
+          (a4Height / canvasHeightMm) * canvas.height
+        );
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = Math.ceil(pageHeightPx);
+        const ctx = pageCanvas.getContext('2d')!;
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(canvas, 0, -srcY);
+        const pageImg = pageCanvas.toDataURL('image/png');
+        const pageRenderedHeightMm = (pageCanvas.height / canvas.height) * canvasHeightMm;
+        pdf.addImage(pageImg, 'PNG', 0, 0, canvasWidthMm, pageRenderedHeightMm);
+        yOffset += a4Height;
+      }
+
+      onProgress?.(100);
+      const pdfBuffer = pdf.output('arraybuffer');
+      return new Blob([pdfBuffer], { type: 'application/pdf' });
+    } finally {
+      document.body.removeChild(container);
+    }
   }
+
 
   // --- Plain text-based formats (TXT, MD, HTML, JSON, CSV, PDF) ---
   onProgress?.(20);
