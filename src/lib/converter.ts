@@ -642,6 +642,17 @@ ${result.value}
     container.style.background = '#ffffff';
     container.style.color = '#000000';
     container.style.zIndex = '-9999';
+
+    // Inject compact line-height and paragraph spacing rules for precise 5-page A4 document layout
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `
+      .docx-wrapper { background: #ffffff !important; padding: 0 !important; }
+      .docx-wrapper > section.docx { box-shadow: none !important; margin: 0 !important; border: none !important; padding: 35pt 40pt !important; }
+      .docx p { line-height: 1.3 !important; }
+      .docx table { margin-top: 4px !important; margin-bottom: 4px !important; }
+      .docx td, .docx th { padding: 3px 5px !important; }
+    `;
+    container.appendChild(styleEl);
     document.body.appendChild(container);
 
     try {
@@ -658,62 +669,120 @@ ${result.value}
         renderEndnotes: true,
       });
 
-      onProgress?.(75);
-
-      const targetElement = (container.querySelector('.docx-wrapper') as HTMLElement) || container;
-
-      const canvas = await html2canvas(targetElement, {
-        scale: 1.5,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-
-      onProgress?.(85);
+      onProgress?.(70);
 
       const pdf = new JsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const a4WidthMm = 210;
       const a4HeightMm = 297;
+      const marginTopMm = 12;
+      const marginBottomMm = 12;
+      const marginLeftMm = 10;
+      const printableWidthMm = a4WidthMm - (marginLeftMm * 2); // 190mm
+      const printableHeightMm = a4HeightMm - marginTopMm - marginBottomMm; // 273mm
 
-      const fullCtx = canvas.getContext('2d')!;
-      const pageHeightPx = Math.floor((a4HeightMm / a4WidthMm) * canvas.width);
-      let currentY = 0;
-      let pageIndex = 0;
+      const sections = Array.from(container.querySelectorAll<HTMLElement>('section.docx'));
+      const targetSections = sections.length > 0 ? sections : [container];
 
-      while (currentY < canvas.height) {
-        let nextY = Math.min(currentY + pageHeightPx, canvas.height);
+      let pdfPageIndex = 0;
 
-        // If not the last page, find a clean horizontal white-space line to break on
-        if (nextY < canvas.height) {
-          const minY = currentY + Math.floor(pageHeightPx * 0.75);
-          nextY = findCleanBreakY(fullCtx, canvas.width, nextY, minY);
+      for (let sIdx = 0; sIdx < targetSections.length; sIdx++) {
+        const sec = targetSections[sIdx];
+        sec.style.background = '#ffffff';
+
+        const canvas = await html2canvas(sec, {
+          scale: 1.5,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+        });
+
+        const fullCtx = canvas.getContext('2d')!;
+        const pageHeightPx = Math.floor((printableHeightMm / printableWidthMm) * canvas.width);
+
+        // Detect explicit Appendix / Section breaks (e.g., "Додаток №")
+        const containerRect = sec.getBoundingClientRect();
+        const appendixElements = Array.from(
+          sec.querySelectorAll('p, h1, h2, h3, div')
+        ).filter(el => {
+          const text = el.textContent || '';
+          return text.includes('Додаток №') || text.includes('Додаток 1');
+        });
+
+        const explicitBreakTops = appendixElements.map(el => {
+          const rect = el.getBoundingClientRect();
+          return Math.round((rect.top - containerRect.top) * 1.5);
+        });
+
+        let currentY = 0;
+
+        while (currentY < canvas.height) {
+          // Check if there is an upcoming Appendix break within 1.3 page heights
+          const upcomingAppendix = explicitBreakTops.find(
+            top => top > currentY && top < currentY + Math.floor(pageHeightPx * 1.3)
+          );
+
+          if (upcomingAppendix) {
+            const gapHeight = upcomingAppendix - currentY;
+            if (gapHeight > 0) {
+              const gapImgData = fullCtx.getImageData(0, currentY, canvas.width, gapHeight);
+              let whiteCount = 0;
+              const sampledTotal = Math.floor(gapImgData.data.length / 16);
+              for (let p = 0; p < gapImgData.data.length; p += 16) {
+                if (gapImgData.data[p] > 240 && gapImgData.data[p + 1] > 240 && gapImgData.data[p + 2] > 240) {
+                  whiteCount++;
+                }
+              }
+
+              // If the gap between previous signatures and Appendix is mostly empty whitespace (>85%), skip the gap!
+              if (sampledTotal > 0 && (whiteCount / sampledTotal) > 0.85) {
+                currentY = upcomingAppendix;
+              }
+            }
+          }
+
+          let nextY = Math.min(currentY + pageHeightPx, canvas.height);
+
+          // If not the last slice of this section, find clean white-space line
+          if (nextY < canvas.height) {
+            const minY = currentY + Math.floor(pageHeightPx * 0.75);
+            nextY = findCleanBreakY(fullCtx, canvas.width, nextY, minY);
+          }
+
+          const sliceHeightPx = nextY - currentY;
+          if (sliceHeightPx <= 0) break;
+
+          if (pdfPageIndex > 0) pdf.addPage();
+
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sliceHeightPx;
+
+          const ctx = pageCanvas.getContext('2d')!;
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(
+            canvas,
+            0, currentY, canvas.width, sliceHeightPx,
+            0, 0, canvas.width, sliceHeightPx
+          );
+
+          const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.92);
+          const sliceHeightMm = (sliceHeightPx / canvas.width) * printableWidthMm;
+
+          pdf.addImage(
+            pageImgData,
+            'JPEG',
+            marginLeftMm,
+            marginTopMm,
+            printableWidthMm,
+            sliceHeightMm
+          );
+
+          currentY = nextY;
+          pdfPageIndex++;
         }
 
-        const sliceHeightPx = nextY - currentY;
-        if (sliceHeightPx <= 0) break;
-
-        if (pageIndex > 0) pdf.addPage();
-
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sliceHeightPx;
-
-        const ctx = pageCanvas.getContext('2d')!;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        ctx.drawImage(
-          canvas,
-          0, currentY, canvas.width, sliceHeightPx,
-          0, 0, canvas.width, sliceHeightPx
-        );
-
-        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.92);
-        const sliceHeightMm = (sliceHeightPx / canvas.width) * a4WidthMm;
-
-        pdf.addImage(pageImgData, 'JPEG', 0, 0, a4WidthMm, sliceHeightMm);
-
-        currentY = nextY;
-        pageIndex++;
+        onProgress?.(70 + Math.round(((sIdx + 1) / targetSections.length) * 25));
       }
 
       onProgress?.(100);
