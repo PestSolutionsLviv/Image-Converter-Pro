@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, FileText, X, Scale, Lock, HardDrive, CheckCircle2, AlertTriangle, ExternalLink } from 'lucide-react';
+import { ShieldCheck, FileText, X, Scale, Lock, HardDrive, CheckCircle2, AlertTriangle, ExternalLink, Phone, Mail } from 'lucide-react';
 
 export type LegalTab = 'privacy' | 'terms';
+
 
 interface LegalModalProps {
   isOpen: boolean;
@@ -257,22 +258,40 @@ export const LegalModal: React.FC<LegalModalProps> = ({
 
         {/* Footer actions */}
         <div
-          className={`p-4 sm:p-5 border-t flex items-center justify-between gap-4 transition-colors ${
+          className={`p-4 sm:p-5 border-t flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors ${
             isDarkTheme ? 'border-white/15 bg-black/30' : 'border-slate-200 bg-slate-50'
           }`}
         >
-          <p className={`text-xs ${isDarkTheme ? 'text-slate-300/80' : 'text-slate-600'}`}>
-            З питань та пропозицій: <span className="font-semibold text-blue-400">Салдан Тарас</span>
-          </p>
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 sm:gap-3 text-xs">
+            <span className={isDarkTheme ? 'text-slate-300/80' : 'text-slate-600'}>З питань та пропозицій:</span>
+            <span className="font-bold text-blue-400">Салдан Тарас</span>
+            <span className={isDarkTheme ? 'text-slate-600' : 'text-slate-300'}>•</span>
+            <a
+              href="tel:+380676706402"
+              className="inline-flex items-center gap-1 font-semibold text-emerald-400 hover:text-emerald-300 hover:underline transition-colors"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>+38 067 670 64 02</span>
+            </a>
+            <span className={isDarkTheme ? 'text-slate-600' : 'text-slate-300'}>•</span>
+            <a
+              href="mailto:saldan1978@gmail.com"
+              className="inline-flex items-center gap-1 font-semibold text-sky-400 hover:text-sky-300 hover:underline transition-colors"
+            >
+              <Mail className="w-3.5 h-3.5" />
+              <span>saldan1978@gmail.com</span>
+            </a>
+          </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 text-xs font-bold text-white bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-95 rounded-full transition-all border border-blue-300/40 shadow-[0_8px_20px_rgba(37,99,235,0.4),inset_0_1px_1px_rgba(255,255,255,0.4)]"
+            className="px-6 py-2.5 text-xs font-bold text-white bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-95 rounded-full transition-all border border-blue-300/40 shadow-[0_8px_20px_rgba(37,99,235,0.4),inset_0_1px_1px_rgba(255,255,255,0.4)] shrink-0"
           >
             Зрозуміло та приймаю
           </button>
         </div>
+
 
       </div>
     </div>

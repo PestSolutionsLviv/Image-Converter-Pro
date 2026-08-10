@@ -36,7 +36,8 @@ import {
 } from './lib/converter';
 import { createDemoPhotoFiles } from './lib/sampleFiles';
 import { getUserLocalData, saveUserLocalData } from './lib/userStorage';
-import { Image, Layers, Sparkles, Filter, RefreshCw, Type, Heart, ShieldCheck, Scale } from 'lucide-react';
+import { Image, Layers, Sparkles, Filter, RefreshCw, Type, Heart, ShieldCheck, Scale, Phone, Mail } from 'lucide-react';
+
 
 export default function App() {
   const [activeCategoryTab, setActiveCategoryTab] = useState<DropZoneTab>('photo');
@@ -718,22 +719,42 @@ export default function App() {
           <p className={`font-bold text-sm tracking-wide ${isDarkTheme ? 'text-slate-200' : 'text-slate-800'}`}>
             © 2026 Universal Converter Pro
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 my-0.5">
-            <p className="text-xs font-medium">
-              Розробник: <span className="font-semibold text-blue-500">Салдан Тарас</span>
+          <div className="flex flex-wrap items-center justify-center gap-3.5 my-0.5">
+            <p className="text-xs font-medium flex items-center gap-1.5">
+              <span>Розробник:</span>
+              <span className="font-bold text-blue-500">Салдан Тарас</span>
             </p>
+            <span className={isDarkTheme ? 'text-slate-700' : 'text-slate-300'}>•</span>
+            <a
+              href="tel:+380676706402"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-500 hover:text-emerald-400 hover:underline transition-colors"
+              title="Зателефонувати розробнику"
+            >
+              <Phone className="w-3.5 h-3.5 text-emerald-500" />
+              <span>+38 067 670 64 02</span>
+            </a>
+            <span className={isDarkTheme ? 'text-slate-700' : 'text-slate-300'}>•</span>
+            <a
+              href="mailto:saldan1978@gmail.com"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-sky-400 hover:text-sky-300 hover:underline transition-colors"
+              title="Написати листа розробнику"
+            >
+              <Mail className="w-3.5 h-3.5 text-sky-400" />
+              <span>saldan1978@gmail.com</span>
+            </a>
 
             <a
               href="https://send.monobank.ua/"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 rounded-full shadow-[0_4px_15px_rgba(251,191,36,0.35),inset_0_1px_1px_rgba(255,255,255,0.6)] border border-amber-300/60 hover:scale-[1.03] active:scale-95 transition-all"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 rounded-full shadow-[0_4px_15px_rgba(251,191,36,0.35),inset_0_1px_1px_rgba(255,255,255,0.6)] border border-amber-300/60 hover:scale-[1.03] active:scale-95 transition-all ml-1"
               title="Підтримати розробника через Банку Monobank"
             >
               <Heart className="w-3.5 h-3.5 text-rose-600 fill-rose-600 animate-pulse" />
               <span>Підтримати проєкт (Monobank ☕)</span>
             </a>
           </div>
+
 
           {/* Legal Navigation Links */}
           <div className="flex flex-wrap items-center justify-center gap-4 text-xs pt-1">
