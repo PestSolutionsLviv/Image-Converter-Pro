@@ -939,27 +939,100 @@ function findCleanBreakY(
   }
 
   if (targetFormat === 'pdf') {
-    onProgress?.(70);
-    const JsPDFClass = await getJsPDF();
-    const pdf = new JsPDFClass();
-    pdf.setFontSize(14);
-    pdf.text(item.name, 10, 15);
-    pdf.setFontSize(10);
+    onProgress?.(40);
+    const container = document.createElement('div');
+    container.style.position = 'fixed';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '794px';
+    container.style.background = '#ffffff';
+    container.style.color = '#0f172a';
+    container.style.padding = '40px 50px';
+    container.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif';
+    container.style.fontSize = '14px';
+    container.style.lineHeight = '1.6';
+    container.style.whiteSpace = 'pre-wrap';
+    container.style.wordBreak = 'break-word';
+    container.style.zIndex = '-9999';
+    container.textContent = text;
+    document.body.appendChild(container);
 
-    const splitLines = pdf.splitTextToSize(text, 180);
-    let y = 25;
-    for (let i = 0; i < splitLines.length; i++) {
-      if (y > 280) {
-        pdf.addPage();
-        y = 15;
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const JsPDFClass = await getJsPDF();
+      onProgress?.(65);
+
+      const canvas = await html2canvas(container, {
+        scale: 1.5,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      onProgress?.(85);
+
+      const pdf = new JsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const a4WidthMm = 210;
+      const a4HeightMm = 297;
+      const marginTopMm = 12;
+      const marginBottomMm = 12;
+      const marginLeftMm = 10;
+      const printableWidthMm = a4WidthMm - (marginLeftMm * 2);
+      const printableHeightMm = a4HeightMm - marginTopMm - marginBottomMm;
+
+      const fullCtx = canvas.getContext('2d')!;
+      const pageHeightPx = Math.floor((printableHeightMm / printableWidthMm) * canvas.width);
+      let currentY = 0;
+      let pageIndex = 0;
+
+      while (currentY < canvas.height) {
+        let nextY = Math.min(currentY + pageHeightPx, canvas.height);
+
+        if (nextY < canvas.height) {
+          const minY = currentY + Math.floor(pageHeightPx * 0.75);
+          nextY = findCleanBreakY(fullCtx, canvas.width, nextY, minY);
+        }
+
+        const sliceHeightPx = nextY - currentY;
+        if (sliceHeightPx <= 0) break;
+
+        if (pageIndex > 0) pdf.addPage();
+
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceHeightPx;
+
+        const ctx = pageCanvas.getContext('2d')!;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(
+          canvas,
+          0, currentY, canvas.width, sliceHeightPx,
+          0, 0, canvas.width, sliceHeightPx
+        );
+
+        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.92);
+        const sliceHeightMm = (sliceHeightPx / canvas.width) * printableWidthMm;
+
+        pdf.addImage(
+          pageImgData,
+          'JPEG',
+          marginLeftMm,
+          marginTopMm,
+          printableWidthMm,
+          sliceHeightMm
+        );
+
+        currentY = nextY;
+        pageIndex++;
       }
-      pdf.text(splitLines[i], 10, y);
-      y += 5;
-    }
 
-    onProgress?.(100);
-    const pdfBuffer = pdf.output('arraybuffer');
-    return new Blob([pdfBuffer], { type: 'application/pdf' });
+      onProgress?.(100);
+      const pdfBuffer = pdf.output('arraybuffer');
+      return new Blob([pdfBuffer], { type: 'application/pdf' });
+    } finally {
+      document.body.removeChild(container);
+    }
   }
 
   return new Blob([text], { type: 'text/plain;charset=utf-8' });
