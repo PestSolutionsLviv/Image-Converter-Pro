@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import {
   ShieldCheck,
   Sparkles,
@@ -112,252 +111,241 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Mobile Liquid Glass Drawer / Slide-over Menu */}
-      <AnimatePresence>
-        {isMenuOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setIsMenuOpen(false)}
-              className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md"
-            />
+      {/* Mobile Drawer — CSS-only slide animation */}
+      {isMenuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setIsMenuOpen(false)}
+            className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md animate-[fadeIn_0.2s_ease]"
+          />
 
-            {/* Drawer Sheet */}
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-              className={`fixed top-0 right-0 bottom-0 z-50 w-[88vw] max-w-sm flex flex-col justify-between p-6 border-l backdrop-blur-3xl shadow-[0_0_80px_rgba(0,0,0,0.8)] ${
-                isDarkTheme
-                  ? 'bg-slate-950/90 text-slate-100 border-white/20'
-                  : 'bg-white/95 text-slate-900 border-slate-300'
-              }`}
-            >
-              <div className="space-y-6 overflow-y-auto no-scrollbar pr-1">
-                {/* Drawer Header */}
-                <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-500 to-sky-400 flex items-center justify-center text-white shadow-md">
-                      <ArrowRightLeft className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h2 className="font-bold text-sm tracking-wide">Converter Pro</h2>
-                      <p className="text-[10px] text-slate-400">Мобільне меню інструментів</p>
-                    </div>
+          {/* Drawer Sheet */}
+          <div
+            className={`fixed top-0 right-0 bottom-0 z-50 w-[88vw] max-w-sm flex flex-col justify-between p-6 border-l backdrop-blur-3xl shadow-[0_0_80px_rgba(0,0,0,0.8)] animate-[slideInRight_0.28s_cubic-bezier(0.22,1,0.36,1)] ${
+              isDarkTheme
+                ? 'bg-slate-950/90 text-slate-100 border-white/20'
+                : 'bg-white/95 text-slate-900 border-slate-300'
+            }`}
+          >
+            <div className="space-y-6 overflow-y-auto no-scrollbar pr-1">
+              {/* Drawer Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-500 to-sky-400 flex items-center justify-center text-white shadow-md">
+                    <ArrowRightLeft className="w-4 h-4" />
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsMenuOpen(false)}
-                    className={`p-2 rounded-xl border transition-all active:scale-90 ${
-                      isDarkTheme
-                        ? 'bg-white/10 hover:bg-white/20 border-white/15 text-slate-200'
-                        : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
-                    }`}
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
+                  <div>
+                    <h2 className="font-bold text-sm tracking-wide">Converter Pro</h2>
+                    <p className="text-[10px] text-slate-400">Мобільне меню інструментів</p>
+                  </div>
                 </div>
 
-                {/* Categories Navigation */}
-                {onTabChange && (
-                  <div className="space-y-2.5">
-                    <span className={`text-[10px] uppercase font-mono tracking-wider font-extrabold ${isDarkTheme ? 'text-sky-300' : 'text-blue-600'}`}>
-                      Категорії інструментів
-                    </span>
+                <button
+                  type="button"
+                  onClick={() => setIsMenuOpen(false)}
+                  className={`p-2 rounded-xl border transition-all active:scale-90 ${
+                    isDarkTheme
+                      ? 'bg-white/10 hover:bg-white/20 border-white/15 text-slate-200'
+                      : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-700'
+                  }`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-                    <div className="grid grid-cols-1 gap-2.5">
-                      {CATEGORIES.map((cat) => {
-                        const Icon = cat.icon;
-                        const isActive = activeTab === cat.id;
-
-                        return (
-                          <button
-                            key={cat.id}
-                            type="button"
-                            onClick={() => {
-                              onTabChange(cat.id);
-                              setIsMenuOpen(false);
-                            }}
-                            className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all active:scale-95 ${
-                              isActive
-                                ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white border-blue-300/40 shadow-lg shadow-blue-500/25'
-                                : isDarkTheme
-                                ? 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200'
-                                : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3.5 min-w-0">
-                              <div
-                                className={`p-2 rounded-xl flex-shrink-0 ${
-                                  isActive
-                                    ? 'bg-white/20 text-white'
-                                    : isDarkTheme
-                                    ? 'bg-blue-500/15 text-blue-400 border border-blue-400/20'
-                                    : 'bg-blue-100 text-blue-600 border border-blue-200'
-                                }`}
-                              >
-                                <Icon className="w-5 h-5" />
-                              </div>
-                              <div className="min-w-0">
-                                <div className="text-sm font-extrabold tracking-tight">{cat.label}</div>
-                                <div className={`text-xs truncate ${isActive ? 'text-sky-100' : 'text-slate-400'}`}>
-                                  {cat.tag}
-                                </div>
-                              </div>
-                            </div>
-                            {isActive && <div className="w-2.5 h-2.5 rounded-full bg-white shadow-md animate-pulse shrink-0 ml-2" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                  </div>
-                )}
-
-                {/* Quick Actions & Settings */}
-                <div className="space-y-2.5 pt-2">
+              {/* Categories Navigation */}
+              {onTabChange && (
+                <div className="space-y-2.5">
                   <span className={`text-[10px] uppercase font-mono tracking-wider font-extrabold ${isDarkTheme ? 'text-sky-300' : 'text-blue-600'}`}>
-                    Швидкі налаштування
+                    Категорії інструментів
                   </span>
 
-                  {/* Theme Switcher */}
-                  <button
-                    type="button"
-                    onClick={onToggleTheme}
-                    className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all active:scale-95 ${
-                      isDarkTheme
-                        ? 'bg-amber-500/15 border-amber-400/30 text-amber-200 hover:bg-amber-500/25'
-                        : 'bg-indigo-50 border-indigo-200 text-indigo-900 hover:bg-indigo-100'
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {CATEGORIES.map((cat) => {
+                      const Icon = cat.icon;
+                      const isActive = activeTab === cat.id;
+
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            onTabChange(cat.id);
+                            setIsMenuOpen(false);
+                          }}
+                          className={`flex items-center justify-between p-3.5 rounded-2xl border text-left transition-all active:scale-95 ${
+                            isActive
+                              ? 'bg-gradient-to-r from-blue-600 to-sky-500 text-white border-blue-300/40 shadow-lg shadow-blue-500/25'
+                              : isDarkTheme
+                              ? 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200'
+                              : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <div
+                              className={`p-2 rounded-xl flex-shrink-0 ${
+                                isActive
+                                  ? 'bg-white/20 text-white'
+                                  : isDarkTheme
+                                  ? 'bg-blue-500/15 text-blue-400 border border-blue-400/20'
+                                  : 'bg-blue-100 text-blue-600 border border-blue-200'
+                              }`}
+                            >
+                              <Icon className="w-5 h-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-sm font-extrabold tracking-tight">{cat.label}</div>
+                              <div className={`text-xs truncate ${isActive ? 'text-sky-100' : 'text-slate-400'}`}>
+                                {cat.tag}
+                              </div>
+                            </div>
+                          </div>
+                          {isActive && <div className="w-2.5 h-2.5 rounded-full bg-white shadow-md animate-pulse shrink-0 ml-2" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                </div>
+              )}
+
+              {/* Quick Actions & Settings */}
+              <div className="space-y-2.5 pt-2">
+                <span className={`text-[10px] uppercase font-mono tracking-wider font-extrabold ${isDarkTheme ? 'text-sky-300' : 'text-blue-600'}`}>
+                  Швидкі налаштування
+                </span>
+
+                {/* Theme Switcher */}
+                <button
+                  type="button"
+                  onClick={onToggleTheme}
+                  className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all active:scale-95 ${
+                    isDarkTheme
+                      ? 'bg-amber-500/15 border-amber-400/30 text-amber-200 hover:bg-amber-500/25'
+                      : 'bg-indigo-50 border-indigo-200 text-indigo-900 hover:bg-indigo-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    {isDarkTheme ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-indigo-600" />}
+                    <span className="text-xs font-bold">
+                      Тема: {isDarkTheme ? 'Темна (Нічна)' : 'Світла (Денна)'}
+                    </span>
+                  </div>
+
+                  {/* Modern ON/OFF Toggle Switch */}
+                  <div
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${
+                      isDarkTheme ? 'bg-amber-500' : 'bg-slate-300'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      {isDarkTheme ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-indigo-600" />}
-                      <span className="text-xs font-bold">
-                        Тема: {isDarkTheme ? 'Темна (Нічна)' : 'Світла (Денна)'}
-                      </span>
-                    </div>
-
-                    {/* Modern ON/OFF Toggle Switch */}
-                    <div
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${
-                        isDarkTheme ? 'bg-amber-500' : 'bg-slate-300'
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out flex items-center justify-center ${
+                        isDarkTheme ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-300 ease-in-out flex items-center justify-center ${
-                          isDarkTheme ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      >
-                        {isDarkTheme ? (
-                          <Sun className="w-3 h-3 text-amber-600" />
-                        ) : (
-                          <Moon className="w-3 h-3 text-indigo-700" />
-                        )}
-                      </span>
-                    </div>
-                  </button>
+                      {isDarkTheme ? (
+                        <Sun className="w-3 h-3 text-amber-600" />
+                      ) : (
+                        <Moon className="w-3 h-3 text-indigo-700" />
+                      )}
+                    </span>
+                  </div>
+                </button>
 
-                  {/* Demo Files trigger */}
+                {/* Demo Files trigger */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onAddDemoFiles();
+                    setIsMenuOpen(false);
+                  }}
+                  disabled={isProcessingDemo}
+                  className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all active:scale-95 disabled:opacity-50 ${
+                    isDarkTheme
+                      ? 'bg-sky-500/15 border-sky-400/30 text-sky-200 hover:bg-sky-500/25'
+                      : 'bg-sky-50 border-sky-200 text-sky-900 hover:bg-sky-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-4 h-4 text-sky-400" />
+                    <span className="text-xs font-bold">Тестові Демо-файли</span>
+                  </div>
+                  <span className="text-[11px] font-semibold">+ Завантажити</span>
+                </button>
+
+                {/* Shortcuts Modal trigger */}
+                {onOpenShortcuts && (
                   <button
                     type="button"
                     onClick={() => {
-                      onAddDemoFiles();
+                      onOpenShortcuts();
                       setIsMenuOpen(false);
                     }}
-                    disabled={isProcessingDemo}
-                    className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all active:scale-95 disabled:opacity-50 ${
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all active:scale-95 ${
                       isDarkTheme
-                        ? 'bg-sky-500/15 border-sky-400/30 text-sky-200 hover:bg-sky-500/25'
-                        : 'bg-sky-50 border-sky-200 text-sky-900 hover:bg-sky-100'
+                        ? 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200'
+                        : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Sparkles className="w-4 h-4 text-sky-400" />
-                      <span className="text-xs font-bold">Тестові Демо-файли</span>
+                      <Keyboard className="w-4 h-4 text-indigo-400" />
+                      <span className="text-xs font-bold">Гарячі клавіші</span>
                     </div>
-                    <span className="text-[11px] font-semibold">+ Завантажити</span>
+                    <kbd className="px-2 py-0.5 text-[10px] font-mono rounded bg-black/30 border border-white/20 text-sky-300">
+                      ?
+                    </kbd>
                   </button>
-
-                  {/* Shortcuts Modal trigger */}
-                  {onOpenShortcuts && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onOpenShortcuts();
-                        setIsMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between p-3 rounded-2xl border text-left transition-all active:scale-95 ${
-                        isDarkTheme
-                          ? 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200'
-                          : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Keyboard className="w-4 h-4 text-indigo-400" />
-                        <span className="text-xs font-bold">Гарячі клавіші</span>
-                      </div>
-                      <kbd className="px-2 py-0.5 text-[10px] font-mono rounded bg-black/30 border border-white/20 text-sky-300">
-                        ?
-                      </kbd>
-                    </button>
-                  )}
-                </div>
-
-                {/* Queue Summary if files loaded */}
-                {fileCount > 0 && (
-                  <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-400/30 space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold text-blue-300">
-                      <span className="flex items-center gap-1.5">
-                        <Layers className="w-4 h-4 text-blue-400" />
-                        У черзі файлів:
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white font-mono text-[11px]">
-                        {fileCount}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-300">
-                      Використовуйте контекстне меню або панель масових дій для обробки.
-                    </p>
-                  </div>
                 )}
+              </div>
 
-                {/* Privacy Badge Card */}
-                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-400/30 flex items-start gap-3 text-emerald-300">
-                  <Lock className="w-4 h-4 mt-0.5 flex-shrink-0 text-emerald-400" />
-                  <div className="text-[11px] leading-relaxed">
-                    <strong className="block text-white font-bold mb-0.5">100% Локальна приватність</strong>
-                    Всі фото та файли конвертуються лише у вашому браузері за допомогою WebAssembly.
+              {/* Queue Summary if files loaded */}
+              {fileCount > 0 && (
+                <div className="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-400/30 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold text-blue-300">
+                    <span className="flex items-center gap-1.5">
+                      <Layers className="w-4 h-4 text-blue-400" />
+                      У черзі файлів:
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white font-mono text-[11px]">
+                      {fileCount}
+                    </span>
                   </div>
+                  <p className="text-[11px] text-slate-300">
+                    Використовуйте контекстне меню або панель масових дій для обробки.
+                  </p>
                 </div>
-              </div>
+              )}
 
-              {/* Drawer Footer */}
-              <div className="pt-4 border-t border-white/10 text-center space-y-2 text-xs text-slate-400">
-                <p className="font-bold text-slate-200">© 2026 Universal Converter Pro</p>
-                <p className="text-[11px] font-semibold text-blue-400">Розробник: Салдан Тарас</p>
-                <div className="pt-1">
-                  <a
-                    href="https://send.monobank.ua/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 rounded-full shadow-[0_4px_15px_rgba(251,191,36,0.35)] border border-amber-300/60 active:scale-95 transition-all"
-                  >
-                    <Heart className="w-3.5 h-3.5 text-rose-600 fill-rose-600 animate-pulse" />
-                    <span>Підтримати проєкт (Monobank ☕)</span>
-                  </a>
+              {/* Privacy Badge Card */}
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-400/30 flex items-start gap-3 text-emerald-300">
+                <Lock className="w-4 h-4 mt-0.5 flex-shrink-0 text-emerald-400" />
+                <div className="text-[11px] leading-relaxed">
+                  <strong className="block text-white font-bold mb-0.5">100% Локальна приватність</strong>
+                  Всі фото та файли конвертуються лише у вашому браузері за допомогою WebAssembly.
                 </div>
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="pt-4 border-t border-white/10 text-center space-y-2 text-xs text-slate-400">
+              <p className="font-bold text-slate-200">© 2026 Universal Converter Pro</p>
+              <p className="text-[11px] font-semibold text-blue-400">Розробник: Салдан Тарас</p>
+              <div className="pt-1">
+                <a
+                  href="https://send.monobank.ua/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 rounded-full shadow-[0_4px_15px_rgba(251,191,36,0.35)] border border-amber-300/60 active:scale-95 transition-all"
+                >
+                  <Heart className="w-3.5 h-3.5 text-rose-600 fill-rose-600 animate-pulse" />
+                  <span>Підтримати проєкт (Monobank ☕)</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </header>
   );
 };
-

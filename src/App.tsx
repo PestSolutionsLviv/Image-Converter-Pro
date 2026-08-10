@@ -4,24 +4,24 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AnimatePresence } from 'motion/react';
+
 import { Header } from './components/Header';
 import { DropZone, DropZoneTab } from './components/DropZone';
 import { GlobalSettings } from './components/GlobalSettings';
-import { FileCard } from './components/FileCard';
+
 import { BatchActions } from './components/BatchActions';
 import { PrivacyInfo } from './components/PrivacyInfo';
 import type { LegalTab } from './components/LegalModal';
 
 // Code-split heavy modals and subcomponents for instant mobile initial load
+// FileCard uses motion/react for swipe gestures — lazy loaded after first file added
+const FileCard = React.lazy(() => import('./components/FileCard').then(m => ({ default: m.FileCard })));
 const UnitAndCurrencyConverter = React.lazy(() => import('./components/UnitAndCurrencyConverter').then(m => ({ default: m.UnitAndCurrencyConverter })));
 const CompareModal = React.lazy(() => import('./components/CompareModal').then(m => ({ default: m.CompareModal })));
 const BatchRenameModal = React.lazy(() => import('./components/BatchRenameModal').then(m => ({ default: m.BatchRenameModal })));
 const ImageAdjustmentModal = React.lazy(() => import('./components/ImageAdjustmentModal').then(m => ({ default: m.ImageAdjustmentModal })));
 const KeyboardShortcutsModal = React.lazy(() => import('./components/KeyboardShortcutsModal').then(m => ({ default: m.KeyboardShortcutsModal })));
 const LegalModal = React.lazy(() => import('./components/LegalModal').then(m => ({ default: m.LegalModal })));
-
-
 
 import {
   ConversionSettings,
@@ -639,7 +639,7 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-1 gap-2.5">
-              <AnimatePresence initial={false}>
+              <React.Suspense fallback={null}>
                 {items.map((item, index) => (
                   <FileCard
                     key={item.id}
@@ -661,8 +661,9 @@ export default function App() {
                     isDarkTheme={isDarkTheme}
                   />
                 ))}
-              </AnimatePresence>
+              </React.Suspense>
             </div>
+
           </div>
         )}
 
