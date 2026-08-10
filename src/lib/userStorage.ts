@@ -1,7 +1,7 @@
 /**
  * User Local Storage Utility (Cookies + LocalStorage)
  * Stores user presets, history, and application preferences isolated locally on the user's browser device.
- * Fully safe for mobile Safari (including Private Browsing mode and URI decoding resilience).
+ * Fully safe for mobile Safari (including Private Browsing mode, URI decoding resilience, and schema validation).
  */
 
 export function setCookie(name: string, value: string, days = 365): void {
@@ -71,7 +71,26 @@ export function getUserLocalData<T>(key: string, fallback: T): T {
   const tryParse = (raw: string | null): T | null => {
     if (!raw) return null;
     try {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed !== undefined && parsed !== null) {
+        // If fallback is an array, ensure parsed is an array and filter out nulls/undefined
+        if (Array.isArray(fallback)) {
+          if (Array.isArray(parsed)) {
+            return parsed.filter((item) => item && typeof item === 'object') as unknown as T;
+          }
+          return fallback;
+        }
+        // If fallback is an object, merge with fallback to ensure no missing keys
+        if (
+          typeof fallback === 'object' &&
+          fallback !== null &&
+          typeof parsed === 'object' &&
+          !Array.isArray(parsed)
+        ) {
+          return { ...fallback, ...parsed };
+        }
+        return parsed;
+      }
     } catch {
       if (typeof fallback === 'boolean') {
         if (raw === 'true') return true as unknown as T;
@@ -80,8 +99,8 @@ export function getUserLocalData<T>(key: string, fallback: T): T {
       if (typeof fallback === 'string') {
         return raw as unknown as T;
       }
-      return null;
     }
+    return null;
   };
 
   // 1. Try Cookie first

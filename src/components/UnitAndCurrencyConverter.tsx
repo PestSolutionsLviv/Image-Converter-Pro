@@ -414,24 +414,30 @@ export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> =
 
 
   const presetCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: presets.length, currencies: 0 };
-    presets.forEach((p) => {
-      if (p.type === 'currencies') {
-        counts.currencies = (counts.currencies || 0) + 1;
-      } else if (p.type === 'units' && p.categoryKey) {
-        counts[p.categoryKey] = (counts[p.categoryKey] || 0) + 1;
-      }
-    });
+    const counts: Record<string, number> = { all: Array.isArray(presets) ? presets.length : 0, currencies: 0 };
+    if (Array.isArray(presets)) {
+      presets.forEach((p) => {
+        if (!p || typeof p !== 'object') return;
+        if (p.type === 'currencies') {
+          counts.currencies = (counts.currencies || 0) + 1;
+        } else if (p.type === 'units' && p.categoryKey) {
+          counts[p.categoryKey] = (counts[p.categoryKey] || 0) + 1;
+        }
+      });
+    }
     return counts;
   }, [presets]);
 
   const filteredPresets = useMemo(() => {
+    if (!Array.isArray(presets)) return [];
     return presets.filter((p) => {
+      if (!p || typeof p !== 'object') return false;
       if (presetCategoryFilter === 'all') return true;
       if (presetCategoryFilter === 'currencies') return p.type === 'currencies';
       return p.type === 'units' && p.categoryKey === presetCategoryFilter;
     });
   }, [presets, presetCategoryFilter]);
+
 
   const currentCategory = UNIT_CATEGORIES.find((c) => c.key === selectedCategoryKey) || UNIT_CATEGORIES[0];
 
