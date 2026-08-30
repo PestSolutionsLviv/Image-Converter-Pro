@@ -25,6 +25,10 @@ export const DropZone: React.FC<DropZoneProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Platform detection for Mac/Windows paste hotkey
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/i.test(navigator.userAgent || navigator.platform);
+  const pasteShortcut = isMac ? '⌘V' : 'Ctrl+V';
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -69,20 +73,44 @@ export const DropZone: React.FC<DropZoneProps> = ({
     return () => window.removeEventListener('paste', handlePaste);
   }, [onFilesAdded]);
 
-  const CATEGORY_TABS: { id: DropZoneTab; label: string; icon: React.ElementType; tag: string }[] = [
-    { id: 'photo', label: 'Фото & RAW', icon: Camera, tag: 'HEIC, CR2, NEF, ARW, JPG, PNG' },
-    { id: 'text', label: 'Текст', icon: FileText, tag: 'DOCX, PDF, TXT, MD, JSON, CSV, HTML' },
-    { id: 'video', label: 'Відео & Аудіо', icon: Video, tag: 'MP4, WEBM, MP3, WAV, OGG' },
-    { id: 'units', label: 'Величини & Валюти', icon: Calculator, tag: 'Конвертер одиниць та курсів' },
+  const CATEGORY_TABS = [
+    { 
+      id: 'photo' as DropZoneTab, 
+      label: 'Фото & RAW', 
+      icon: Camera, 
+      primaryFormats: ['HEIC', 'RAW', 'JPG', 'PNG'], 
+      extraCount: 5 
+    },
+    { 
+      id: 'text' as DropZoneTab, 
+      label: 'Документи', 
+      icon: FileText, 
+      primaryFormats: ['DOCX', 'PDF', 'TXT', 'MD'], 
+      extraCount: 6 
+    },
+    { 
+      id: 'video' as DropZoneTab, 
+      label: 'Відео & Аудіо', 
+      icon: Video, 
+      primaryFormats: ['MP4', 'WEBM', 'MP3', 'WAV'], 
+      extraCount: 4 
+    },
+    { 
+      id: 'units' as DropZoneTab, 
+      label: 'Величини & Валюти', 
+      icon: Calculator, 
+      primaryFormats: ['Метри', 'Валюти', 'Вага'], 
+      extraCount: 6 
+    },
   ];
 
   return (
     <div className="space-y-4">
       {/* Categories Selector Navigation Bar */}
       <div
-        className={`grid grid-cols-2 lg:grid-cols-4 items-stretch gap-2.5 sm:gap-3 p-2.5 sm:p-3 rounded-[28px] border backdrop-blur-3xl transition-all duration-300 ${
+        className={`grid grid-cols-2 lg:grid-cols-4 items-stretch gap-2.5 sm:gap-3 p-2 sm:p-2.5 rounded-[26px] border backdrop-blur-3xl transition-all duration-300 ${
           isDarkTheme
-            ? 'bg-slate-900/70 border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)]'
+            ? 'bg-slate-900/70 border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)]'
             : 'bg-white/90 border-slate-200 shadow-md shadow-slate-200/50'
         }`}
       >
@@ -94,16 +122,16 @@ export const DropZone: React.FC<DropZoneProps> = ({
               key={tab.id}
               type="button"
               onClick={() => onTabChange(tab.id)}
-              className={`relative flex items-center gap-3 px-3.5 sm:px-5 py-3 sm:py-3.5 rounded-[20px] text-left transition-all duration-300 active:scale-95 group ${
+              className={`relative flex items-center gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-[20px] text-left transition-all duration-300 active:scale-95 group ${
                 isActive
                   ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-sky-500 text-white border border-blue-300/50 shadow-[0_10px_28px_rgba(37,99,235,0.45),inset_0_1px_1px_rgba(255,255,255,0.5)] scale-[1.02]'
                   : isDarkTheme
-                  ? 'bg-white/[0.04] text-slate-200 hover:text-white hover:bg-white/[0.09] border border-white/10 hover:border-white/20'
+                  ? 'bg-white/[0.03] text-slate-200 hover:text-white hover:bg-white/[0.08] border border-white/5 hover:border-white/15'
                   : 'bg-slate-100/80 text-slate-800 hover:text-slate-950 hover:bg-slate-200/90 border border-slate-200/80'
               }`}
             >
               <div
-                className={`p-2 sm:p-2.5 rounded-xl flex-shrink-0 transition-transform duration-300 group-hover:scale-110 ${
+                className={`p-2 rounded-xl flex-shrink-0 transition-transform duration-300 group-hover:scale-110 ${
                   isActive
                     ? 'bg-white/20 text-white shadow-inner'
                     : isDarkTheme
@@ -111,29 +139,44 @@ export const DropZone: React.FC<DropZoneProps> = ({
                     : 'bg-blue-100 text-blue-600 border border-blue-200'
                 }`}
               >
-                <Icon className="w-5 h-5 sm:w-5 sm:h-5" />
+                <Icon className="w-5 h-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm sm:text-base font-extrabold tracking-tight leading-tight truncate">
+                <div className="text-sm font-extrabold tracking-tight leading-tight truncate">
                   {tab.label}
                 </div>
-                <div
-                  className={`text-xs font-medium truncate mt-0.5 ${
-                    isActive
-                      ? 'text-sky-100/90'
-                      : isDarkTheme
-                      ? 'text-slate-400/90'
-                      : 'text-slate-500'
-                  }`}
-                >
-                  {tab.tag}
+                <div className="flex items-center gap-1 mt-0.5 overflow-hidden flex-wrap text-[11px]">
+                  {tab.primaryFormats.slice(0, 3).map((f, idx) => (
+                    <span
+                      key={idx}
+                      className={`font-mono ${
+                        isActive
+                          ? 'text-sky-100/90'
+                          : isDarkTheme
+                          ? 'text-slate-400/90'
+                          : 'text-slate-500'
+                      }`}
+                    >
+                      {f}{idx < 2 ? ',' : ''}
+                    </span>
+                  ))}
+                  <span
+                    className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded-md ${
+                      isActive
+                        ? 'bg-white/20 text-white'
+                        : isDarkTheme
+                        ? 'bg-white/10 text-sky-300'
+                        : 'bg-slate-200/80 text-slate-700'
+                    }`}
+                  >
+                    +{tab.extraCount}
+                  </span>
                 </div>
               </div>
             </button>
           );
         })}
       </div>
-
 
       {/* Drop Zone Box (Only for file-based categories) */}
       {activeTab !== 'units' && (
@@ -149,8 +192,8 @@ export const DropZone: React.FC<DropZoneProps> = ({
                 : 'border-blue-500 bg-blue-50/90 ring-4 ring-blue-300/50 scale-[1.005] shadow-xl'
               : isDarkTheme
               ? hasFiles
-                ? 'border-white/20 bg-white/[0.07] hover:border-sky-300/60 hover:bg-white/[0.12] py-6 px-6 shadow-[0_15px_40px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.35)]'
-                : 'border-white/20 bg-white/[0.07] hover:border-sky-300/60 hover:bg-white/[0.12] py-10 px-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.35)]'
+                ? 'border-white/10 bg-white/[0.05] hover:border-sky-300/50 hover:bg-white/[0.08] py-6 px-6 shadow-[0_15px_40px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)]'
+                : 'border-white/10 bg-white/[0.05] hover:border-sky-300/50 hover:bg-white/[0.08] py-10 px-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.2)]'
               : hasFiles
               ? 'border-slate-200/90 bg-white/80 hover:border-blue-400 hover:bg-white py-6 px-6 shadow-md shadow-slate-200/50'
               : 'border-slate-200/90 bg-white/80 hover:border-blue-400 hover:bg-white py-10 px-6 shadow-lg shadow-slate-200/60'
@@ -168,28 +211,26 @@ export const DropZone: React.FC<DropZoneProps> = ({
           <div className="flex flex-col items-center justify-center text-center">
             {/* Animated Icon Circle */}
             <div
-              className={`w-16 h-16 sm:w-20 sm:h-20 rounded-[24px] flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-105 shadow-lg ${
+              className={`w-16 h-16 sm:w-18 sm:h-18 rounded-[24px] flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-105 shadow-lg ${
                 isDragOver
                   ? 'bg-gradient-to-br from-blue-500 to-sky-400 text-white shadow-blue-500/40 border border-white/40'
                   : isDarkTheme
-                  ? 'bg-white/10 text-sky-300 border border-white/25 group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-sky-400 group-hover:text-white group-hover:border-white/40 shadow-blue-500/20 backdrop-blur-2xl'
+                  ? 'bg-white/10 text-sky-300 border border-white/20 group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-sky-400 group-hover:text-white group-hover:border-white/40 shadow-blue-500/20 backdrop-blur-2xl'
                   : 'bg-blue-50 text-blue-600 border border-blue-200 group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-sky-500 group-hover:text-white group-hover:border-blue-300 shadow-blue-200/50'
               }`}
             >
-              <UploadCloud className="w-8 h-8 sm:w-10 sm:h-10" />
+              <UploadCloud className="w-8 h-8 sm:w-9 sm:h-9" />
             </div>
 
             <h3
-              className={`text-lg sm:text-xl font-bold mb-2 tracking-tight ${
-                isDarkTheme ? 'text-white drop-shadow-sm' : 'text-slate-900'
+              className={`text-lg sm:text-2xl font-black mb-2 tracking-tight ${
+                isDarkTheme ? 'text-white' : 'text-slate-900'
               }`}
             >
-              {isDragOver
-                ? 'Відпустіть файли для завантаження'
-                : activeTab === 'photo'
+              {activeTab === 'photo'
                 ? 'Завантажте фото (HEIC, RAW CR2/NEF/ARW, JPG, PNG, WEBP)'
                 : activeTab === 'text'
-                ? 'Завантажте документы (PDF, TXT, MD, JSON, CSV)'
+                ? 'Завантажте документи (DOCX, PDF, TXT, MD, JSON, CSV)'
                 : activeTab === 'video'
                 ? 'Завантажте відео чи аудіо (MP4, WEBM, MP3, WAV, OGG)'
                 : 'Завантажте файли будь-якого формату для конвертації'}
@@ -197,7 +238,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
 
             <p
               className={`text-xs sm:text-sm max-w-md mb-4 ${
-                isDarkTheme ? 'text-slate-200/90' : 'text-slate-600'
+                isDarkTheme ? 'text-slate-300' : 'text-slate-600'
               }`}
             >
               Натисніть для вибору файлів або вставте з буферу обміну (
@@ -208,7 +249,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
                     : 'bg-slate-100 text-blue-700 border-slate-300 font-bold'
                 }`}
               >
-                Ctrl+V
+                {pasteShortcut}
               </span>
               )
             </p>
@@ -218,7 +259,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
               {(activeTab === 'photo'
                 ? ['HEIC', 'CR2', 'NEF', 'ARW', 'DNG', 'JPG', 'PNG', 'WEBP', 'PDF']
                 : activeTab === 'text'
-                ? ['PDF', 'TXT', 'MD', 'JSON', 'CSV', 'HTML', 'RTF']
+                ? ['DOCX', 'PDF', 'TXT', 'MD', 'JSON', 'CSV', 'HTML', 'RTF']
                 : activeTab === 'video'
                 ? ['MP4', 'WEBM', 'MP3', 'WAV', 'OGG', 'M4A']
                 : ['HEIC', 'RAW', 'PDF', 'TXT', 'MP3', 'MP4']
@@ -227,7 +268,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
                   key={fmt}
                   className={`text-[11px] font-bold px-3 py-1 rounded-full border transition-all ${
                     isDarkTheme
-                      ? 'bg-blue-500/25 text-sky-200 border-blue-300/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]'
+                      ? 'bg-blue-500/20 text-sky-200 border-blue-300/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
                       : 'bg-blue-50 text-blue-800 border-blue-200 font-extrabold shadow-xs'
                   }`}
                 >
@@ -244,31 +285,25 @@ export const DropZone: React.FC<DropZoneProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 px-6 py-2.5 text-xs sm:text-sm font-bold text-white bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-95 rounded-full shadow-[0_10px_25px_-5px_rgba(37,99,235,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)] transition-all border border-blue-300/40"
+                className="inline-flex items-center gap-2 px-6 py-3 text-xs sm:text-sm font-bold text-white bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-95 rounded-full border border-blue-300/40 transition-all shadow-[0_10px_25px_-5px_rgba(37,99,235,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)]"
               >
                 <FolderPlus className="w-4 h-4" />
                 Вибрати файли
               </button>
 
-              {!hasFiles && (
-                <button
-                  type="button"
-                  onClick={onAddDemoFiles}
-                  disabled={isProcessingDemo}
-                  className={`inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-semibold active:scale-95 rounded-full border transition-all disabled:opacity-50 ${
-                    isDarkTheme
-                      ? 'text-slate-100 bg-white/10 hover:bg-white/20 border-white/20 backdrop-blur-2xl shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]'
-                      : 'text-slate-700 bg-slate-100 hover:bg-slate-200 border-slate-300 shadow-sm'
-                  }`}
-                >
-                  <Sparkles
-                    className={`w-4 h-4 ${
-                      isDarkTheme ? 'text-sky-300' : 'text-blue-600'
-                    }`}
-                  />
-                  {isProcessingDemo ? 'Створення...' : 'Спробувати тестові файли'}
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={onAddDemoFiles}
+                disabled={isProcessingDemo}
+                className={`inline-flex items-center gap-2 px-5 py-3 text-xs sm:text-sm font-bold rounded-full border transition-all active:scale-95 disabled:opacity-50 ${
+                  isDarkTheme
+                    ? 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200 hover:text-white shadow-xs'
+                    : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700 shadow-xs'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 text-sky-400" />
+                {isProcessingDemo ? 'Завантаження...' : 'Спробувати демо-файли'}
+              </button>
             </div>
           </div>
         </div>
@@ -276,4 +311,3 @@ export const DropZone: React.FC<DropZoneProps> = ({
     </div>
   );
 };
-

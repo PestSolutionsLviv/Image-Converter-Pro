@@ -42,12 +42,54 @@ import {
 import { createDemoPhotoFiles } from './lib/sampleFiles';
 import { getUserLocalData, saveUserLocalData } from './lib/userStorage';
 import { ProtectedContact } from './components/ProtectedContact';
-import { Image, Layers, Sparkles, Filter, RefreshCw, Type, Heart, ShieldCheck, Scale } from 'lucide-react';
+import { Image, Layers, Sparkles, Filter, RefreshCw, Type, Heart, ShieldCheck, Scale, ExternalLink, UploadCloud } from 'lucide-react';
 
 
 
 export default function App() {
   const [activeCategoryTab, setActiveCategoryTab] = useState<DropZoneTab>('photo');
+  const [isWindowDragging, setIsWindowDragging] = useState(false);
+  const dragCounterRef = React.useRef(0);
+
+  React.useEffect(() => {
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounterRef.current++;
+      if (e.dataTransfer?.types?.includes('Files')) {
+        setIsWindowDragging(true);
+      }
+    };
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounterRef.current--;
+      if (dragCounterRef.current <= 0) {
+        dragCounterRef.current = 0;
+        setIsWindowDragging(false);
+      }
+    };
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+    };
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounterRef.current = 0;
+      setIsWindowDragging(false);
+      if (e.dataTransfer?.files?.length) {
+        handleFilesAdded(Array.from(e.dataTransfer.files));
+      }
+    };
+
+    window.addEventListener('dragenter', handleDragEnter);
+    window.addEventListener('dragleave', handleDragLeave);
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('drop', handleDrop);
+    return () => {
+      window.removeEventListener('dragenter', handleDragEnter);
+      window.removeEventListener('dragleave', handleDragLeave);
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('drop', handleDrop);
+    };
+  }, [handleFilesAdded]);
   const [isDarkTheme, setIsDarkTheme] = useState<boolean>(() => {
     return getUserLocalData<boolean>('converter_theme', true);
   });
@@ -121,9 +163,23 @@ export default function App() {
           previewUrl = URL.createObjectURL(file);
         } else if (category === 'document') {
           try {
-            const rawText = await file.text();
-            textPreview = rawText.slice(0, 300);
-          } catch (e) {}
+            if (ext === 'docx') {
+              const mammothModule = await import('mammoth/mammoth.browser');
+              const mammoth = (mammothModule.default || mammothModule) as any;
+              const res = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+              const clean = (res.value || '').replace(/\s+/g, ' ').trim();
+              if (clean.length > 0) {
+                textPreview = clean.slice(0, 120);
+              }
+            } else if (['txt', 'md', 'json', 'csv', 'html', 'rtf', 'xml'].includes(ext)) {
+              const rawText = await file.text();
+              if (!/[\x00-\x08\x0B\x0C\x0E-\x1F]/.test(rawText.slice(0, 80))) {
+                textPreview = rawText.replace(/\s+/g, ' ').trim().slice(0, 120);
+              }
+            }
+          } catch (e) {
+            textPreview = undefined;
+          }
         }
 
         newItems.push({
@@ -677,8 +733,10 @@ export default function App() {
           isDarkTheme={isDarkTheme}
         />
 
-        {/* Technical & Privacy Info Card */}
-        <PrivacyInfo isDarkTheme={isDarkTheme} />
+        {/* Technical & Privacy Info Card (Only on home file view without clutter) */}
+        {activeCategoryTab !== 'units' && !hasFiles && (
+          <PrivacyInfo isDarkTheme={isDarkTheme} />
+        )}
 
       </main>
 
@@ -743,33 +801,38 @@ export default function App() {
           <p className={`font-bold text-sm tracking-wide ${isDarkTheme ? 'text-slate-200' : 'text-slate-800'}`}>
             © 2026 Universal Converter Pro
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3.5 my-0.5">
-            <p className="text-xs font-medium flex items-center gap-1.5">
-              <span>Розробник:</span>
-              <span className="font-bold text-blue-500">Салдан Тарас</span>
-            </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 my-0.5 text-xs">
+            <div className="flex items-center gap-1.5 font-medium">
+              <span>Створено з ❤️</span>
+              <a
+                href="https://github.com/PestSolutionsLviv"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold text-sky-400 hover:text-sky-300 hover:underline transition-colors inline-flex items-center gap-1"
+              >
+                <span>Тарас Салдан</span>
+                <ExternalLink className="w-3 h-3 opacity-70" />
+              </a>
+            </div>
             <span className={isDarkTheme ? 'text-slate-700' : 'text-slate-300'}>•</span>
             <ProtectedContact
-              type="phone"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-500 hover:text-emerald-400 hover:underline transition-colors"
-              title="Зателефонувати розробнику"
-            />
-            <span className={isDarkTheme ? 'text-slate-700' : 'text-slate-300'}>•</span>
-            <ProtectedContact
-              type="email"
               className="inline-flex items-center gap-1 text-xs font-semibold text-sky-400 hover:text-sky-300 hover:underline transition-colors"
-              title="Написати листа розробнику"
+              title="Служба підтримки"
             />
-
+            <span className={isDarkTheme ? 'text-slate-700' : 'text-slate-300'}>•</span>
             <a
-              href="https://send.monobank.ua/"
+              href="https://www.buymeacoffee.com/pestsolutions"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 rounded-full shadow-[0_4px_15px_rgba(251,191,36,0.35),inset_0_1px_1px_rgba(255,255,255,0.6)] border border-amber-300/60 hover:scale-[1.03] active:scale-95 transition-all ml-1"
-              title="Підтримати розробника через Банку Monobank"
+              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border transition-all active:scale-95 ${
+                isDarkTheme
+                  ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-400/30'
+                  : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200 shadow-xs'
+              }`}
+              title="Підтримати проєкт (Buy Me a Coffee)"
             >
-              <Heart className="w-3.5 h-3.5 text-rose-600 fill-rose-600 animate-pulse" />
-              <span>Підтримати проєкт (Monobank ☕)</span>
+              <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
+              <span>Buy Me a Coffee ☕</span>
             </a>
           </div>
 

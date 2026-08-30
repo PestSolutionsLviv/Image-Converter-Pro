@@ -1,0 +1,17 @@
+{
+  "name": "Universal Converter Pro",
+  "short_name": "ConverterPro",
+  "description": "100% Client-Side In-Browser Media & Document Converter",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#090d16",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

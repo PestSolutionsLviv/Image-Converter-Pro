@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'motion/react';
 import {
   Calculator,
@@ -168,10 +168,10 @@ const UNIT_CATEGORIES: UnitCategoryDef[] = [
       { id: 'km', name: 'Кілометри', symbol: 'км', toBase: (v) => v * 1000, fromBase: (v) => v / 1000 },
       { id: 'cm', name: 'Сантиметри', symbol: 'см', toBase: (v) => v / 100, fromBase: (v) => v * 100 },
       { id: 'mm', name: 'Міліметри', symbol: 'мм', toBase: (v) => v / 1000, fromBase: (v) => v * 1000 },
-      { id: 'in', name: 'Дюйми (Inch)', symbol: 'in (″)', toBase: (v) => v * 0.0254, fromBase: (v) => v / 0.0254 },
-      { id: 'ft', name: 'Фути (Feet)', symbol: 'ft (′)', toBase: (v) => v * 0.3048, fromBase: (v) => v / 0.3048 },
-      { id: 'yd', name: 'Ярди (Yard)', symbol: 'yd', toBase: (v) => v * 0.9144, fromBase: (v) => v / 0.9144 },
-      { id: 'mi', name: 'Милі (Mile)', symbol: 'mi', toBase: (v) => v * 1609.344, fromBase: (v) => v / 1609.344 },
+      { id: 'in', name: 'Дюйми', symbol: 'in', toBase: (v) => v * 0.0254, fromBase: (v) => v / 0.0254 },
+      { id: 'ft', name: 'Фути', symbol: 'ft', toBase: (v) => v * 0.3048, fromBase: (v) => v / 0.3048 },
+      { id: 'yd', name: 'Ярди', symbol: 'yd', toBase: (v) => v * 0.9144, fromBase: (v) => v / 0.9144 },
+      { id: 'mi', name: 'Милі', symbol: 'mi', toBase: (v) => v * 1609.344, fromBase: (v) => v / 1609.344 },
       { id: 'nmi', name: 'Морські милі', symbol: 'nmi', toBase: (v) => v * 1852, fromBase: (v) => v / 1852 },
     ],
   },
@@ -185,8 +185,8 @@ const UNIT_CATEGORIES: UnitCategoryDef[] = [
       { id: 'g', name: 'Грами', symbol: 'г', toBase: (v) => v, fromBase: (v) => v },
       { id: 'mg', name: 'Міліграми', symbol: 'мг', toBase: (v) => v / 1000, fromBase: (v) => v * 1000 },
       { id: 't', name: 'Тонни', symbol: 'т', toBase: (v) => v * 1000000, fromBase: (v) => v / 1000000 },
-      { id: 'lb', name: 'Фунти (Pound)', symbol: 'lb', toBase: (v) => v * 453.59237, fromBase: (v) => v / 453.59237 },
-      { id: 'oz', name: 'Унції (Ounce)', symbol: 'oz', toBase: (v) => v * 28.349523125, fromBase: (v) => v / 28.349523125 },
+      { id: 'lb', name: 'Фунти', symbol: 'lb', toBase: (v) => v * 453.59237, fromBase: (v) => v / 453.59237 },
+      { id: 'oz', name: 'Унції', symbol: 'oz', toBase: (v) => v * 28.349523125, fromBase: (v) => v / 28.349523125 },
       { id: 'ct', name: 'Карати', symbol: 'ct', toBase: (v) => v * 0.2, fromBase: (v) => v / 0.2 },
     ],
   },
@@ -196,9 +196,9 @@ const UNIT_CATEGORIES: UnitCategoryDef[] = [
     icon: Thermometer,
     baseSymbol: '°C',
     units: [
-      { id: 'c', name: 'Градуси Цельсія', symbol: '°C', toBase: (v) => v, fromBase: (v) => v },
-      { id: 'f', name: 'Градуси Фаренгейта', symbol: '°F', toBase: (v) => ((v - 32) * 5) / 9, fromBase: (v) => (v * 9) / 5 + 32 },
-      { id: 'k', name: 'Кельвіни', symbol: 'K', toBase: (v) => v - 273.15, fromBase: (v) => v + 273.15 },
+      { id: 'c', name: 'Цельсій', symbol: '°C', toBase: (v) => v, fromBase: (v) => v },
+      { id: 'f', name: 'Фаренгейт', symbol: '°F', toBase: (v) => ((v - 32) * 5) / 9, fromBase: (v) => (v * 9) / 5 + 32 },
+      { id: 'k', name: 'Кельвін', symbol: 'K', toBase: (v) => v - 273.15, fromBase: (v) => v + 273.15 },
     ],
   },
   {
@@ -224,8 +224,8 @@ const UNIT_CATEGORIES: UnitCategoryDef[] = [
       { id: 'l', name: 'Літри', symbol: 'л', toBase: (v) => v, fromBase: (v) => v },
       { id: 'ml', name: 'Мілілітри', symbol: 'мл', toBase: (v) => v / 1000, fromBase: (v) => v * 1000 },
       { id: 'm3', name: 'Кубічні метри', symbol: 'м³', toBase: (v) => v * 1000, fromBase: (v) => v / 1000 },
-      { id: 'gal', name: 'Галони (US Gal)', symbol: 'gal', toBase: (v) => v * 3.78541, fromBase: (v) => v / 3.78541 },
-      { id: 'floz', name: 'Рідкі унції (fl oz)', symbol: 'fl oz', toBase: (v) => v * 0.0295735, fromBase: (v) => v / 0.0295735 },
+      { id: 'gal', name: 'Галони', symbol: 'gal', toBase: (v) => v * 3.78541, fromBase: (v) => v / 3.78541 },
+      { id: 'floz', name: 'Рідкі унції', symbol: 'fl oz', toBase: (v) => v * 0.0295735, fromBase: (v) => v / 0.0295735 },
       { id: 'cup', name: 'Чашки (Cups)', symbol: 'чаш', toBase: (v) => v * 0.24, fromBase: (v) => v / 0.24 },
     ],
   },
@@ -261,11 +261,11 @@ const UNIT_CATEGORIES: UnitCategoryDef[] = [
     icon: HardDrive,
     baseSymbol: 'B',
     units: [
-      { id: 'b', name: 'Байти (Byte)', symbol: 'Б', toBase: (v) => v, fromBase: (v) => v },
-      { id: 'kb', name: 'Кілобайти (KB)', symbol: 'КБ', toBase: (v) => v * 1024, fromBase: (v) => v / 1024 },
-      { id: 'mb', name: 'Мегабайти (MB)', symbol: 'МБ', toBase: (v) => v * 1048576, fromBase: (v) => v / 1048576 },
-      { id: 'gb', name: 'Гігабайти (GB)', symbol: 'ГБ', toBase: (v) => v * 1073741824, fromBase: (v) => v / 1073741824 },
-      { id: 'tb', name: 'Терабайти (TB)', symbol: 'ТБ', toBase: (v) => v * 1099511627776, fromBase: (v) => v / 1099511627776 },
+      { id: 'b', name: 'Байти', symbol: 'Б', toBase: (v) => v, fromBase: (v) => v },
+      { id: 'kb', name: 'Кілобайти', symbol: 'КБ', toBase: (v) => v * 1024, fromBase: (v) => v / 1024 },
+      { id: 'mb', name: 'Мегабайти', symbol: 'МБ', toBase: (v) => v * 1048576, fromBase: (v) => v / 1048576 },
+      { id: 'gb', name: 'Гігабайти', symbol: 'ГБ', toBase: (v) => v * 1073741824, fromBase: (v) => v / 1073741824 },
+      { id: 'tb', name: 'Терабайти', symbol: 'ТБ', toBase: (v) => v * 1099511627776, fromBase: (v) => v / 1099511627776 },
     ],
   },
   {
@@ -274,10 +274,10 @@ const UNIT_CATEGORIES: UnitCategoryDef[] = [
     icon: Zap,
     baseSymbol: 'Pa',
     units: [
-      { id: 'bar', name: 'Бар (Bar)', symbol: 'бар', toBase: (v) => v * 100000, fromBase: (v) => v / 100000 },
-      { id: 'atm', name: 'Атмосфери (Atm)', symbol: 'атм', toBase: (v) => v * 101325, fromBase: (v) => v / 101325 },
-      { id: 'pa', name: 'Паскалі (Pa)', symbol: 'Па', toBase: (v) => v, fromBase: (v) => v },
-      { id: 'psi', name: 'PSI (Pounds/in²)', symbol: 'psi', toBase: (v) => v * 6894.76, fromBase: (v) => v / 6894.76 },
+      { id: 'bar', name: 'Бар', symbol: 'бар', toBase: (v) => v * 100000, fromBase: (v) => v / 100000 },
+      { id: 'atm', name: 'Атмосфери', symbol: 'атм', toBase: (v) => v * 101325, fromBase: (v) => v / 101325 },
+      { id: 'pa', name: 'Паскалі', symbol: 'Па', toBase: (v) => v, fromBase: (v) => v },
+      { id: 'psi', name: 'PSI', symbol: 'psi', toBase: (v) => v * 6894.76, fromBase: (v) => v / 6894.76 },
       { id: 'kwh', name: 'Кіловат-години', symbol: 'кВт·год', toBase: (v) => v * 3600000, fromBase: (v) => v / 3600000 },
       { id: 'kcal', name: 'Кілокалорії', symbol: 'ккал', toBase: (v) => v * 4184, fromBase: (v) => v / 4184 },
     ],
@@ -346,6 +346,7 @@ export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> =
   // --- UNIT CONVERTER STATE ---
   const [selectedCategoryKey, setSelectedCategoryKey] = useState<UnitCategoryKey>('length');
   const [unitInputValue, setUnitInputValue] = useState<number>(1);
+  const [unitPrecision, setUnitPrecision] = useState<number>(4);
   const [fromUnitId, setFromUnitId] = useState<string>('km');
   const [toUnitId, setToUnitId] = useState<string>('mi');
   const [copiedUnit, setCopiedUnit] = useState(false);
@@ -605,18 +606,38 @@ export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> =
   const baseVal = fromUnitObj.toBase(unitInputValue || 0);
   const convertedUnitVal = toUnitObj.fromBase(baseVal);
 
-  const formattedUnitResult = Number.isInteger(convertedUnitVal)
-    ? convertedUnitVal.toString()
-    : Math.abs(convertedUnitVal) < 0.0001
-    ? convertedUnitVal.toExponential(4)
-    : Number(convertedUnitVal.toFixed(6)).toString();
+  const formattedUnitResult = useMemo(() => {
+    if (Number.isInteger(convertedUnitVal)) {
+      return convertedUnitVal.toLocaleString('uk-UA');
+    }
+    if (Math.abs(convertedUnitVal) < 0.000001 && convertedUnitVal !== 0) {
+      return convertedUnitVal.toExponential(unitPrecision);
+    }
+    const fixedStr = convertedUnitVal.toFixed(unitPrecision);
+    const parts = fixedStr.split('.');
+    const intPart = parseInt(parts[0], 10).toLocaleString('uk-UA');
+    return parts.length > 1 ? `${intPart}.${parts[1]}` : intPart;
+  }, [convertedUnitVal, unitPrecision]);
 
-  const handleSwapUnits = () => {
+  const handleSwapUnits = useCallback(() => {
     const temp = fromUnitId;
     setFromUnitId(toUnitId);
     setToUnitId(temp);
     setUnitSwapRotation((prev) => prev + 180);
-  };
+  }, [fromUnitId, toUnitId]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
+      if (e.key === 'x' || e.key === 'X') {
+        e.preventDefault();
+        handleSwapUnits();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSwapUnits]);
 
   const copyUnitToClipboard = () => {
     const text = `${unitInputValue} ${fromUnitObj.symbol} = ${formattedUnitResult} ${toUnitObj.symbol}`;
@@ -1064,8 +1085,9 @@ export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> =
           <div>
             {presets.length === 0 ? (
               <div className={`p-4 rounded-2xl border text-center space-y-2.5 transition-colors ${isDarkTheme ? 'bg-black/30 border-white/10' : 'bg-slate-100/80 border-slate-200'}`}>
-                <p className={`text-xs leading-relaxed ${isDarkTheme ? 'text-slate-300' : 'text-slate-600'}`}>
-                  🔒 <b>Усі збережені пресети зберігаються 100% локально на вашому пристрої</b> у кукі (Cookies) та LocalStorage вашого браузера. Вони не передаються на сервер і доступні виключно вам.
+                <p className={`text-xs flex items-center justify-center gap-1.5 ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
+                  <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Зберігається 100% локально у вашому браузері</span>
                 </p>
                 <div className="flex items-center justify-center gap-3 pt-1">
                   <button
@@ -1378,7 +1400,7 @@ export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> =
                 <select
                   value={fromUnitId}
                   onChange={(e) => setFromUnitId(e.target.value)}
-                  className={`text-xs font-bold px-3 py-3 rounded-2xl border cursor-pointer outline-none min-w-[130px] transition-colors ${
+                  className={`text-xs font-bold px-3 py-3 rounded-2xl border cursor-pointer outline-none min-w-[160px] sm:min-w-[185px] max-w-[200px] transition-colors ${
                     isDarkTheme
                       ? 'bg-slate-900/90 text-white border-white/20 hover:border-white/40'
                       : 'bg-white text-slate-800 border-slate-300 hover:border-slate-400'
@@ -1405,7 +1427,7 @@ export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> =
                     ? 'bg-white/10 hover:bg-blue-500/30 border-white/20 text-sky-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
                     : 'bg-white hover:bg-blue-50 border-slate-300 text-blue-600 shadow-sm'
                 }`}
-                title="Поміняти місцями одиниці (автоматичний перерахунок)"
+                title="Поміняти місцями одиниці (Клавіша X)"
               >
                 <motion.div
                   animate={{ rotate: unitSwapRotation }}
@@ -1439,7 +1461,7 @@ export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> =
                 <select
                   value={toUnitId}
                   onChange={(e) => setToUnitId(e.target.value)}
-                  className={`text-xs font-bold px-3 py-3 rounded-2xl border cursor-pointer outline-none min-w-[130px] transition-colors ${
+                  className={`text-xs font-bold px-3 py-3 rounded-2xl border cursor-pointer outline-none min-w-[160px] sm:min-w-[185px] max-w-[200px] transition-colors ${
                     isDarkTheme
                       ? 'bg-slate-900/90 text-white border-white/20 hover:border-white/40'
                       : 'bg-white text-slate-800 border-slate-300 hover:border-slate-400'

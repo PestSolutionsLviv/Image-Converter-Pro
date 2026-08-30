@@ -322,7 +322,7 @@ export const FileCard: React.FC<FileCardProps> = ({
                 </>
               )}
 
-              {item.textPreview && (
+              {item.textPreview && !item.textPreview.startsWith('PK') && !item.textPreview.startsWith('%PDF') && (
                 <>
                   <span>•</span>
                   <span className={`truncate max-w-[150px] italic ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
@@ -386,7 +386,7 @@ export const FileCard: React.FC<FileCardProps> = ({
                       {formatBytes(item.outputSize)}
                     </span>
 
-                    {savingsPct !== null && (
+                    {savingsPct !== null && item.category === "image" && (
                       <span
                         className={`text-[11px] font-bold px-1.5 py-0.5 rounded-md ${
                           savingsPct >= 0

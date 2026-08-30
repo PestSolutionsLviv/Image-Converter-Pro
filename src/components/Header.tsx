@@ -330,16 +330,26 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Drawer Footer */}
             <div className="pt-4 border-t border-white/10 text-center space-y-2 text-xs text-slate-400">
               <p className="font-bold text-slate-200">© 2026 Universal Converter Pro</p>
-              <p className="text-[11px] font-semibold text-blue-400">Розробник: Салдан Тарас</p>
-              <div className="pt-1">
+              <div className="flex items-center justify-center gap-1.5 text-[11px]">
+                <span>Created with ❤️ by</span>
                 <a
-                  href="https://send.monobank.ua/"
+                  href="https://github.com/PestSolutionsLviv"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-extrabold text-amber-950 bg-gradient-to-r from-amber-400 via-amber-300 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 rounded-full shadow-[0_4px_15px_rgba(251,191,36,0.35)] border border-amber-300/60 active:scale-95 transition-all"
+                  className="font-bold text-sky-400 hover:underline"
                 >
-                  <Heart className="w-3.5 h-3.5 text-rose-600 fill-rose-600 animate-pulse" />
-                  <span>Підтримати проєкт (Monobank ☕)</span>
+                  Taras Saldan
+                </a>
+              </div>
+              <div className="pt-1">
+                <a
+                  href="https://www.buymeacoffee.com/pestsolutions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-400/30 active:scale-95 transition-all"
+                >
+                  <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
+                  <span>Buy Me a Coffee ☕</span>
                 </a>
               </div>
             </div>

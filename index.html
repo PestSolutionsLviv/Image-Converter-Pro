@@ -3,25 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    <meta name="theme-color" content="#0f172a" />
-    <meta name="description" content="Універсальний локальний конвертер фотографій (HEIC, RAW, JPG, PNG, WebP), аудіо, відео, документів, а також конвертер величин та курсів валют 100% у браузері." />
-    <title>Universal Converter Pro - Конвертер Зображень, Валют та Величин</title>
+    <meta name="theme-color" content="#090d16" />
+    <meta name="description" content="100% In-Browser & Private File Converter. Конвертер фото (HEIC, RAW, JPG, PNG, WebP), документів (DOCX, PDF, TXT) та відео/аудіо без передачі файлів на сервер." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <title>Universal Converter Pro - 100% Client-Side Media & Document Converter</title>
 
     <script>
-      // Immediately unregister stale Service Workers & clear old CacheStorage in Safari
-      if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for (var i = 0; i < registrations.length; i++) {
-            registrations[i].unregister();
-          }
-        }).catch(function() {});
-      }
-      if (typeof window !== 'undefined' && 'caches' in window) {
-        caches.keys().then(function(keys) {
-          for (var i = 0; i < keys.length; i++) {
-            caches.delete(keys[i]);
-          }
-        }).catch(function() {});
+      if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js').catch(function() {});
+        });
       }
     </script>
 
@@ -29,7 +21,7 @@
       html, body {
         margin: 0;
         padding: 0;
-        background-color: #0f172a;
+        background-color: #090d16;
         color: #f8fafc;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       }
@@ -40,7 +32,7 @@
         align-items: center;
         justify-content: center;
         gap: 14px;
-        background: radial-gradient(circle at 50% 30%, #1e293b 0%, #0f172a 100%);
+        background: radial-gradient(circle at 50% 30%, #1e293b 0%, #090d16 100%);
       }
       .app-spinner {
         width: 38px;
