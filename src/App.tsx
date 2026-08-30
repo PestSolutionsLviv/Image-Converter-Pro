@@ -50,46 +50,6 @@ export default function App() {
   const [activeCategoryTab, setActiveCategoryTab] = useState<DropZoneTab>('photo');
   const [isWindowDragging, setIsWindowDragging] = useState(false);
   const dragCounterRef = React.useRef(0);
-
-  React.useEffect(() => {
-    const handleDragEnter = (e: DragEvent) => {
-      e.preventDefault();
-      dragCounterRef.current++;
-      if (e.dataTransfer?.types?.includes('Files')) {
-        setIsWindowDragging(true);
-      }
-    };
-    const handleDragLeave = (e: DragEvent) => {
-      e.preventDefault();
-      dragCounterRef.current--;
-      if (dragCounterRef.current <= 0) {
-        dragCounterRef.current = 0;
-        setIsWindowDragging(false);
-      }
-    };
-    const handleDragOver = (e: DragEvent) => {
-      e.preventDefault();
-    };
-    const handleDrop = (e: DragEvent) => {
-      e.preventDefault();
-      dragCounterRef.current = 0;
-      setIsWindowDragging(false);
-      if (e.dataTransfer?.files?.length) {
-        handleFilesAdded(Array.from(e.dataTransfer.files));
-      }
-    };
-
-    window.addEventListener('dragenter', handleDragEnter);
-    window.addEventListener('dragleave', handleDragLeave);
-    window.addEventListener('dragover', handleDragOver);
-    window.addEventListener('drop', handleDrop);
-    return () => {
-      window.removeEventListener('dragenter', handleDragEnter);
-      window.removeEventListener('dragleave', handleDragLeave);
-      window.removeEventListener('dragover', handleDragOver);
-      window.removeEventListener('drop', handleDrop);
-    };
-  }, [handleFilesAdded]);
   const [isDarkTheme, setIsDarkTheme] = useState<boolean>(() => {
     return getUserLocalData<boolean>('converter_theme', true);
   });
@@ -246,6 +206,47 @@ export default function App() {
     },
     []
   );
+
+  // Fullscreen Window Drag Overlay Listener
+  useEffect(() => {
+    const handleDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounterRef.current++;
+      if (e.dataTransfer?.types?.includes('Files')) {
+        setIsWindowDragging(true);
+      }
+    };
+    const handleDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounterRef.current--;
+      if (dragCounterRef.current <= 0) {
+        dragCounterRef.current = 0;
+        setIsWindowDragging(false);
+      }
+    };
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+    };
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounterRef.current = 0;
+      setIsWindowDragging(false);
+      if (e.dataTransfer?.files?.length) {
+        handleFilesAdded(Array.from(e.dataTransfer.files));
+      }
+    };
+
+    window.addEventListener('dragenter', handleDragEnter);
+    window.addEventListener('dragleave', handleDragLeave);
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('drop', handleDrop);
+    return () => {
+      window.removeEventListener('dragenter', handleDragEnter);
+      window.removeEventListener('dragleave', handleDragLeave);
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('drop', handleDrop);
+    };
+  }, [handleFilesAdded]);
 
   // Add synthetic demo files for instant testing
   const handleAddDemoFiles = useCallback(async () => {
