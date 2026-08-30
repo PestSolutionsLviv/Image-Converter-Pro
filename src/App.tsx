@@ -54,6 +54,7 @@ export default function App() {
     return getUserLocalData<boolean>('converter_theme', true);
   });
   const [items, setItems] = useState<FileItem[]>([]);
+  const hasFiles = items.length > 0;
   const [isProcessing, setIsProcessing] = useState(false);
   const [isProcessingDemo, setIsProcessingDemo] = useState(false);
   const [compareItem, setCompareItem] = useState<FileItem | null>(null);
@@ -735,7 +736,7 @@ export default function App() {
         />
 
         {/* Technical & Privacy Info Card (Only on home file view without clutter) */}
-        {activeCategoryTab !== 'units' && !hasFiles && (
+        {activeCategoryTab !== 'units' && items.length === 0 && (
           <PrivacyInfo isDarkTheme={isDarkTheme} />
         )}
 
