@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   Calculator,
   Coins,
@@ -17,29 +17,26 @@ import {
   HardDrive,
   Zap,
   TrendingUp,
-  Sun,
-  Moon,
-  X,
   Bookmark,
   BookmarkPlus,
   Trash2,
-  Sparkles,
-  Filter,
   Download,
   Upload,
-  History,
-  Lock,
+  MoreVertical,
+  ChevronDown,
+  ChevronUp,
+  X,
 } from 'lucide-react';
 import { getUserLocalData, saveUserLocalData } from '../lib/userStorage';
 
-
 // --- TYPES ---
 export type UnitCategoryKey =
+  | 'currencies'
   | 'length'
   | 'mass'
+  | 'temperature'
   | 'area'
   | 'volume'
-  | 'temperature'
   | 'speed'
   | 'time'
   | 'data'
@@ -48,8 +45,7 @@ export type UnitCategoryKey =
 export interface ConversionPreset {
   id: string;
   label: string;
-  type: 'units' | 'currencies';
-  categoryKey?: UnitCategoryKey;
+  categoryKey: UnitCategoryKey;
   amount: number;
   fromId: string;
   toId: string;
@@ -58,82 +54,27 @@ export interface ConversionPreset {
 export interface RecentConversion {
   id: string;
   timestamp: number;
-  type: 'units' | 'currencies';
-  categoryKey?: UnitCategoryKey;
+  categoryKey: UnitCategoryKey;
   amount: number;
   fromId: string;
-  fromSymbol?: string;
   toId: string;
-  toSymbol?: string;
   result: string;
   label: string;
 }
 
 const DEFAULT_PRESETS: ConversionPreset[] = [
-  {
-    id: 'preset-1',
-    label: '1 in → мм',
-    type: 'units',
-    categoryKey: 'length',
-    amount: 1,
-    fromId: 'in',
-    toId: 'mm',
-  },
-  {
-    id: 'preset-2',
-    label: '1 lb → кг',
-    type: 'units',
-    categoryKey: 'mass',
-    amount: 1,
-    fromId: 'lb',
-    toId: 'kg',
-  },
-  {
-    id: 'preset-3',
-    label: '100 USD → EUR',
-    type: 'currencies',
-    amount: 100,
-    fromId: 'USD',
-    toId: 'EUR',
-  },
-  {
-    id: 'preset-4',
-    label: '100 EUR → UAH',
-    type: 'currencies',
-    amount: 100,
-    fromId: 'EUR',
-    toId: 'UAH',
-  },
-  {
-    id: 'preset-5',
-    label: '1 gal → л',
-    type: 'units',
-    categoryKey: 'volume',
-    amount: 1,
-    fromId: 'gal',
-    toId: 'l',
-  },
-];
-
-export const PRESET_CATEGORY_OPTIONS: { id: string; label: string; icon: React.ElementType }[] = [
-  { id: 'all', label: 'Усі', icon: Bookmark },
-  { id: 'currencies', label: 'Валюти', icon: Coins },
-  { id: 'length', label: 'Довжина', icon: Ruler },
-  { id: 'mass', label: 'Маса / Вага', icon: Weight },
-  { id: 'volume', label: "Об'єм", icon: Box },
-  { id: 'temperature', label: 'Температура', icon: Thermometer },
-  { id: 'area', label: 'Площа', icon: Maximize2 },
-  { id: 'speed', label: 'Швидкість', icon: Gauge },
-  { id: 'time', label: 'Час', icon: Clock },
-  { id: 'data', label: 'Дані', icon: HardDrive },
-  { id: 'pressure', label: 'Тиск', icon: Zap },
+  { id: 'p1', label: '1 in → мм', categoryKey: 'length', amount: 1, fromId: 'in', toId: 'mm' },
+  { id: 'p2', label: '1 lb → кг', categoryKey: 'mass', amount: 1, fromId: 'lb', toId: 'kg' },
+  { id: 'p3', label: '100 USD → UAH', categoryKey: 'currencies', amount: 100, fromId: 'USD', toId: 'UAH' },
+  { id: 'p4', label: '100 EUR → UAH', categoryKey: 'currencies', amount: 100, fromId: 'EUR', toId: 'UAH' },
+  { id: 'p5', label: '1 gal → л', categoryKey: 'volume', amount: 1, fromId: 'gal', toId: 'l' },
+  { id: 'p6', label: '100 км/год → mi/h', categoryKey: 'speed', amount: 100, fromId: 'kmh', toId: 'mph' },
 ];
 
 interface UnitDef {
   id: string;
   name: string;
   symbol: string;
-  // Factor to convert from base unit
   toBase: (val: number) => number;
   fromBase: (val: number) => number;
 }
@@ -146,17 +87,6 @@ interface UnitCategoryDef {
   units: UnitDef[];
 }
 
-// Base Units:
-// Length: Meter (m)
-// Mass: Gram (g)
-// Area: Square Meter (m²)
-// Volume: Liter (L)
-// Temperature: Celsius (°C)
-// Speed: m/s
-// Time: Second (s)
-// Data: Byte (B)
-// Pressure: Pascal (Pa)
-
 const UNIT_CATEGORIES: UnitCategoryDef[] = [
   {
     key: 'length',
@@ -164,14 +94,14 @@ const UNIT_CATEGORIES: UnitCategoryDef[] = [
     icon: Ruler,
     baseSymbol: 'm',
     units: [
-      { id: 'm', name: 'Метри', symbol: 'м', toBase: (v) => v, fromBase: (v) => v },
       { id: 'km', name: 'Кілометри', symbol: 'км', toBase: (v) => v * 1000, fromBase: (v) => v / 1000 },
+      { id: 'm', name: 'Метри', symbol: 'м', toBase: (v) => v, fromBase: (v) => v },
       { id: 'cm', name: 'Сантиметри', symbol: 'см', toBase: (v) => v / 100, fromBase: (v) => v * 100 },
       { id: 'mm', name: 'Міліметри', symbol: 'мм', toBase: (v) => v / 1000, fromBase: (v) => v * 1000 },
-      { id: 'in', name: 'Дюйми', symbol: 'in', toBase: (v) => v * 0.0254, fromBase: (v) => v / 0.0254 },
-      { id: 'ft', name: 'Фути', symbol: 'ft', toBase: (v) => v * 0.3048, fromBase: (v) => v / 0.3048 },
-      { id: 'yd', name: 'Ярди', symbol: 'yd', toBase: (v) => v * 0.9144, fromBase: (v) => v / 0.9144 },
       { id: 'mi', name: 'Милі', symbol: 'mi', toBase: (v) => v * 1609.344, fromBase: (v) => v / 1609.344 },
+      { id: 'yd', name: 'Ярди', symbol: 'yd', toBase: (v) => v * 0.9144, fromBase: (v) => v / 0.9144 },
+      { id: 'ft', name: 'Фути', symbol: 'ft', toBase: (v) => v * 0.3048, fromBase: (v) => v / 0.3048 },
+      { id: 'in', name: 'Дюйми', symbol: 'in', toBase: (v) => v * 0.0254, fromBase: (v) => v / 0.0254 },
       { id: 'nmi', name: 'Морські милі', symbol: 'nmi', toBase: (v) => v * 1852, fromBase: (v) => v / 1852 },
     ],
   },
@@ -210,23 +140,23 @@ const UNIT_CATEGORIES: UnitCategoryDef[] = [
       { id: 'm2', name: 'Квадратні метри', symbol: 'м²', toBase: (v) => v, fromBase: (v) => v },
       { id: 'km2', name: 'Квадратні кілометри', symbol: 'км²', toBase: (v) => v * 1000000, fromBase: (v) => v / 1000000 },
       { id: 'ha', name: 'Гектари', symbol: 'га', toBase: (v) => v * 10000, fromBase: (v) => v / 10000 },
-      { id: 'ar', name: 'Сотки / Ари', symbol: 'сот', toBase: (v) => v * 100, fromBase: (v) => v / 100 },
+      { id: 'ar', name: 'Сотки (Ари)', symbol: 'сот', toBase: (v) => v * 100, fromBase: (v) => v / 100 },
       { id: 'ft2', name: 'Квадратні фути', symbol: 'ft²', toBase: (v) => v * 0.092903, fromBase: (v) => v / 0.092903 },
       { id: 'ac', name: 'Акри', symbol: 'акр', toBase: (v) => v * 4046.856, fromBase: (v) => v / 4046.856 },
     ],
   },
   {
     key: 'volume',
-    label: 'Об\'єм',
+    label: 'Об’єм',
     icon: Box,
-    baseSymbol: 'L',
+    baseSymbol: 'l',
     units: [
       { id: 'l', name: 'Літри', symbol: 'л', toBase: (v) => v, fromBase: (v) => v },
       { id: 'ml', name: 'Мілілітри', symbol: 'мл', toBase: (v) => v / 1000, fromBase: (v) => v * 1000 },
       { id: 'm3', name: 'Кубічні метри', symbol: 'м³', toBase: (v) => v * 1000, fromBase: (v) => v / 1000 },
-      { id: 'gal', name: 'Галони', symbol: 'gal', toBase: (v) => v * 3.78541, fromBase: (v) => v / 3.78541 },
+      { id: 'gal', name: 'Галони (US)', symbol: 'gal', toBase: (v) => v * 3.78541, fromBase: (v) => v / 3.78541 },
+      { id: 'pt', name: 'Пінти (US)', symbol: 'pt', toBase: (v) => v * 0.473176, fromBase: (v) => v / 0.473176 },
       { id: 'floz', name: 'Рідкі унції', symbol: 'fl oz', toBase: (v) => v * 0.0295735, fromBase: (v) => v / 0.0295735 },
-      { id: 'cup', name: 'Чашки (Cups)', symbol: 'чаш', toBase: (v) => v * 0.24, fromBase: (v) => v / 0.24 },
     ],
   },
   {
@@ -235,10 +165,10 @@ const UNIT_CATEGORIES: UnitCategoryDef[] = [
     icon: Gauge,
     baseSymbol: 'm/s',
     units: [
-      { id: 'kmh', name: 'Кілометри за годину', symbol: 'км/год', toBase: (v) => v / 3.6, fromBase: (v) => v * 3.6 },
-      { id: 'ms', name: 'Метри за секунду', symbol: 'м/с', toBase: (v) => v, fromBase: (v) => v },
-      { id: 'mph', name: 'Милі за годину', symbol: 'mph', toBase: (v) => v * 0.44704, fromBase: (v) => v / 0.44704 },
-      { id: 'knot', name: 'Вузли (Knots)', symbol: 'вуз', toBase: (v) => v * 0.514444, fromBase: (v) => v / 0.514444 },
+      { id: 'kmh', name: 'Км/год', symbol: 'км/год', toBase: (v) => v / 3.6, fromBase: (v) => v * 3.6 },
+      { id: 'ms', name: 'Метри/сек', symbol: 'м/с', toBase: (v) => v, fromBase: (v) => v },
+      { id: 'mph', name: 'Милі/год', symbol: 'mph', toBase: (v) => v * 0.44704, fromBase: (v) => v / 0.44704 },
+      { id: 'kn', name: 'Вузли', symbol: 'kn', toBase: (v) => v * 0.514444, fromBase: (v) => v / 0.514444 },
     ],
   },
   {
@@ -257,7 +187,7 @@ const UNIT_CATEGORIES: UnitCategoryDef[] = [
   },
   {
     key: 'data',
-    label: 'Цифрові дані',
+    label: 'Дані',
     icon: HardDrive,
     baseSymbol: 'B',
     units: [
@@ -270,7 +200,7 @@ const UNIT_CATEGORIES: UnitCategoryDef[] = [
   },
   {
     key: 'pressure',
-    label: 'Тиск та Енергія',
+    label: 'Тиск & Енергія',
     icon: Zap,
     baseSymbol: 'Pa',
     units: [
@@ -284,7 +214,6 @@ const UNIT_CATEGORIES: UnitCategoryDef[] = [
   },
 ];
 
-// --- CURRENCY DEFINITIONS & FALLBACK RATES ---
 interface CurrencyDef {
   code: string;
   name: string;
@@ -292,11 +221,12 @@ interface CurrencyDef {
   flag: string;
 }
 
+// Ukrainian currency symbol set to universal UAH (грн)
 const SUPPORTED_CURRENCIES: CurrencyDef[] = [
-  { code: 'UAH', name: 'Українська гривня', symbol: '₴', flag: '🇺🇦' },
+  { code: 'UAH', name: 'Гривня', symbol: 'грн', flag: '🇺🇦' },
   { code: 'USD', name: 'Долар США', symbol: '$', flag: '🇺🇸' },
   { code: 'EUR', name: 'Євро', symbol: '€', flag: '🇪🇺' },
-  { code: 'GBP', name: 'Британський фунт', symbol: '£', flag: '🇬🇧' },
+  { code: 'GBP', name: 'Фунт стерлінгів', symbol: '£', flag: '🇬🇧' },
   { code: 'PLN', name: 'Польський злотий', symbol: 'zł', flag: '🇵🇱' },
   { code: 'CHF', name: 'Швейцарський франк', symbol: 'CHF', flag: '🇨🇭' },
   { code: 'CAD', name: 'Канадський долар', symbol: 'C$', flag: '🇨🇦' },
@@ -306,7 +236,6 @@ const SUPPORTED_CURRENCIES: CurrencyDef[] = [
   { code: 'ETH', name: 'Ефіріум', symbol: 'Ξ', flag: '🔷' },
 ];
 
-// Default relative rates based on USD = 1.0 (Fallback if offline)
 const DEFAULT_RATES_USD: Record<string, number> = {
   USD: 1.0,
   UAH: 41.5,
@@ -327,54 +256,85 @@ interface UnitAndCurrencyConverterProps {
 }
 
 export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> = ({
-  isDarkTheme: externalDarkTheme,
-  onToggleTheme: externalToggleTheme,
+  isDarkTheme = true,
 }) => {
-  const [mainMode, setMainMode] = useState<'units' | 'currencies'>('units');
-  const [internalDarkTheme, setInternalDarkTheme] = useState<boolean>(true);
+  // --- 1. UNIFIED CATEGORY SELECTION ---
+  const [selectedCategory, setSelectedCategory] = useState<UnitCategoryKey>('currencies');
 
-  const isDarkTheme = externalDarkTheme !== undefined ? externalDarkTheme : internalDarkTheme;
-
-  const toggleTheme = () => {
-    if (externalToggleTheme) {
-      externalToggleTheme();
-    } else {
-      setInternalDarkTheme((prev) => !prev);
-    }
-  };
-
-  // --- UNIT CONVERTER STATE ---
-  const [selectedCategoryKey, setSelectedCategoryKey] = useState<UnitCategoryKey>('length');
-  const [unitInputValue, setUnitInputValue] = useState<number>(1);
-  const [unitPrecision, setUnitPrecision] = useState<number>(4);
+  // --- UNIT STATE ---
+  const [unitLeft, setUnitLeft] = useState<string>('1');
+  const [unitRight, setUnitRight] = useState<string>('1000');
   const [fromUnitId, setFromUnitId] = useState<string>('km');
-  const [toUnitId, setToUnitId] = useState<string>('mi');
-  const [copiedUnit, setCopiedUnit] = useState(false);
+  const [toUnitId, setToUnitId] = useState<string>('m');
+  const [precision, setPrecision] = useState<number>(4);
 
-  // --- CURRENCY CONVERTER STATE ---
-  const [currencyAmount, setCurrencyAmount] = useState<number>(100);
-  const [fromCurrency, setFromCurrency] = useState<string>('USD');
-  const [toCurrency, setToCurrency] = useState<string>('UAH');
+  // --- CURRENCY STATE ---
+  const [currLeft, setCurrLeft] = useState<string>('100');
+  const [currRight, setCurrRight] = useState<string>('4150');
+  const [fromCurr, setFromCurr] = useState<string>('USD');
+  const [toCurr, setToCurr] = useState<string>('UAH');
   const [rates, setRates] = useState<Record<string, number>>(DEFAULT_RATES_USD);
-  const [lastRateUpdate, setLastRateUpdate] = useState<string>('Автономні курси');
+  const [lastRateUpdate, setLastRateUpdate] = useState<string>('Курси онлайн');
   const [isFetchingRates, setIsFetchingRates] = useState<boolean>(false);
-  const [copiedCurrency, setCopiedCurrency] = useState(false);
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
 
-  // Fetch live exchange rates on mount or refresh (with 12-hour local cache & 2.0s network timeout)
-  const fetchLiveRates = async () => {
-    // 1. Check 12-hour local cache
+  // --- REVERSED ROTATION ANIMATION ---
+  const [swapRotation, setSwapRotation] = useState<number>(0);
+
+  // --- PRESETS ACCORDION ---
+  const [expandedDrawer, setExpandedDrawer] = useState<'none' | 'presets'>('none');
+  const [showSettingsMenu, setShowSettingsMenu] = useState<boolean>(false);
+  const [copiedToast, setCopiedToast] = useState<boolean>(false);
+  const [presetToast, setPresetToast] = useState<string | null>(null);
+
+  const settingsMenuRef = useRef<HTMLDivElement>(null);
+
+  // Load presets from LocalStorage
+  const [presets, setPresets] = useState<ConversionPreset[]>(() => {
+    return getUserLocalData<ConversionPreset[]>('converter_presets', DEFAULT_PRESETS);
+  });
+
+  useEffect(() => {
+    saveUserLocalData('converter_presets', presets);
+  }, [presets]);
+
+  // Online / Offline monitor
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Click outside to close settings menu
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (settingsMenuRef.current && !settingsMenuRef.current.contains(e.target as Node)) {
+        setShowSettingsMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Fetch live currency rates
+  const fetchLiveRates = useCallback(async () => {
     const cachedRates = getUserLocalData<Record<string, number> | null>('currency_rates_cache', null);
     const cachedTime = getUserLocalData<number>('currency_rates_time', 0);
     if (cachedRates && cachedTime && Date.now() - cachedTime < 12 * 60 * 60 * 1000) {
       setRates(cachedRates);
-      const timeStr = new Date(cachedTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      setLastRateUpdate(`Курси з кешу (${timeStr})`);
+      const timeStr = new Date(cachedTime).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+      setLastRateUpdate(`Кеш (${timeStr})`);
       return;
     }
 
     setIsFetchingRates(true);
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2.0s max timeout
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
 
     try {
       const res = await fetch('https://open.er-api.com/v6/latest/USD', { signal: controller.signal });
@@ -382,1399 +342,729 @@ export const UnitAndCurrencyConverter: React.FC<UnitAndCurrencyConverterProps> =
       if (res.ok) {
         const data = await res.json();
         if (data && data.rates) {
-          const updatedRates = {
-            ...DEFAULT_RATES_USD,
-            ...data.rates,
-          };
+          const updatedRates = { ...DEFAULT_RATES_USD, ...data.rates };
           setRates(updatedRates);
           saveUserLocalData('currency_rates_cache', updatedRates);
           saveUserLocalData('currency_rates_time', Date.now());
-          const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          setLastRateUpdate(`Оновлено сьогодні о ${timeStr}`);
+          const timeStr = new Date().toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+          setLastRateUpdate(`Оновлено о ${timeStr}`);
         }
       }
-    } catch (e) {
+    } catch {
       clearTimeout(timeoutId);
-      console.warn('Could not fetch live currency rates, using fallback rates', e);
-      setLastRateUpdate('Автономний режим');
+      setLastRateUpdate('Офлайн-курс');
     } finally {
       setIsFetchingRates(false);
     }
-  };
-
+  }, []);
 
   useEffect(() => {
     fetchLiveRates();
+  }, [fetchLiveRates]);
+
+  // Active Category Definition
+  const isCurrencyMode = selectedCategory === 'currencies';
+  const currentCategoryDef = useMemo(() => {
+    return UNIT_CATEGORIES.find((c) => c.key === selectedCategory) || UNIT_CATEGORIES[0];
+  }, [selectedCategory]);
+
+  const fromUnitObj = useMemo(() => {
+    return currentCategoryDef.units.find((u) => u.id === fromUnitId) || currentCategoryDef.units[0];
+  }, [currentCategoryDef, fromUnitId]);
+
+  const toUnitObj = useMemo(() => {
+    return currentCategoryDef.units.find((u) => u.id === toUnitId) || currentCategoryDef.units[1] || currentCategoryDef.units[0];
+  }, [currentCategoryDef, toUnitId]);
+
+  // Standard Decimal Formatting with DOT (.)
+  const formatNumber = useCallback((val: number, prec: number): string => {
+    if (isNaN(val)) return '0';
+    if (val === 0) return '0';
+    if (Number.isInteger(val)) return val.toString();
+    const str = val.toFixed(prec);
+    return str.replace(/\.?0+$/, '');
   }, []);
 
-  // --- PRESETS STATE & LOCAL STORAGE (COOKIES + LOCALSTORAGE) ---
-  const [presets, setPresets] = useState<ConversionPreset[]>(() => {
-    return getUserLocalData<ConversionPreset[]>('converter_presets', []);
-  });
+  // --- TWO-WAY BINDING FOR UNITS ---
+  const recalculateUnitRight = useCallback((leftStr: string, fUnit: UnitDef, tUnit: UnitDef, prec: number) => {
+    const val = parseFloat(leftStr);
+    if (isNaN(val)) {
+      setUnitRight('');
+      return;
+    }
+    const base = fUnit.toBase(val);
+    const converted = tUnit.fromBase(base);
+    setUnitRight(formatNumber(converted, prec));
+  }, [formatNumber]);
 
-  // --- RECENT CONVERSIONS HISTORY STATE ---
-  const [recentHistory, setRecentHistory] = useState<RecentConversion[]>(() => {
-    return getUserLocalData<RecentConversion[]>('converter_recent_history', []);
-  });
+  const recalculateUnitLeft = useCallback((rightStr: string, fUnit: UnitDef, tUnit: UnitDef, prec: number) => {
+    const val = parseFloat(rightStr);
+    if (isNaN(val)) {
+      setUnitLeft('');
+      return;
+    }
+    const base = tUnit.toBase(val);
+    const converted = fUnit.fromBase(base);
+    setUnitLeft(formatNumber(converted, prec));
+  }, [formatNumber]);
 
-  const [savedTab, setSavedTab] = useState<'presets' | 'history'>('presets');
-  const [presetSavedToast, setPresetSavedToast] = useState(false);
-  const [importToast, setImportToast] = useState<{ message: string; isError?: boolean } | null>(null);
-  const [presetCategoryFilter, setPresetCategoryFilter] = useState<string>('all');
-  const [unitSwapRotation, setUnitSwapRotation] = useState(0);
-  const [currencySwapRotation, setCurrencySwapRotation] = useState(0);
+  // --- TWO-WAY BINDING FOR CURRENCIES ---
+  const recalculateCurrRight = useCallback((leftStr: string, fromC: string, toC: string, currentRates: Record<string, number>, prec: number) => {
+    const val = parseFloat(leftStr);
+    if (isNaN(val)) {
+      setCurrRight('');
+      return;
+    }
+    const fRate = currentRates[fromC] || 1;
+    const tRate = currentRates[toC] || 1;
+    const usd = val / fRate;
+    const converted = usd * tRate;
+    setCurrRight(formatNumber(converted, prec));
+  }, [formatNumber]);
 
+  const recalculateCurrLeft = useCallback((rightStr: string, fromC: string, toC: string, currentRates: Record<string, number>, prec: number) => {
+    const val = parseFloat(rightStr);
+    if (isNaN(val)) {
+      setCurrLeft('');
+      return;
+    }
+    const fRate = currentRates[fromC] || 1;
+    const tRate = currentRates[toC] || 1;
+    const usd = val / tRate;
+    const converted = usd * fRate;
+    setCurrLeft(formatNumber(converted, prec));
+  }, [formatNumber]);
+
+  // Initial calculation on unit/currency change
   useEffect(() => {
-    saveUserLocalData('converter_presets', presets);
-  }, [presets]);
-
-  useEffect(() => {
-    saveUserLocalData('converter_recent_history', recentHistory);
-  }, [recentHistory]);
-
-
-  const presetCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: Array.isArray(presets) ? presets.length : 0, currencies: 0 };
-    if (Array.isArray(presets)) {
-      presets.forEach((p) => {
-        if (!p || typeof p !== 'object') return;
-        if (p.type === 'currencies') {
-          counts.currencies = (counts.currencies || 0) + 1;
-        } else if (p.type === 'units' && p.categoryKey) {
-          counts[p.categoryKey] = (counts[p.categoryKey] || 0) + 1;
-        }
-      });
-    }
-    return counts;
-  }, [presets]);
-
-  const filteredPresets = useMemo(() => {
-    if (!Array.isArray(presets)) return [];
-    return presets.filter((p) => {
-      if (!p || typeof p !== 'object') return false;
-      if (presetCategoryFilter === 'all') return true;
-      if (presetCategoryFilter === 'currencies') return p.type === 'currencies';
-      return p.type === 'units' && p.categoryKey === presetCategoryFilter;
-    });
-  }, [presets, presetCategoryFilter]);
-
-
-  const currentCategory = UNIT_CATEGORIES.find((c) => c.key === selectedCategoryKey) || UNIT_CATEGORIES[0];
-
-  const handleSelectCategory = (key: UnitCategoryKey) => {
-    setSelectedCategoryKey(key);
-    const cat = UNIT_CATEGORIES.find((c) => c.key === key);
-    if (cat && cat.units.length >= 2) {
-      setFromUnitId(cat.units[0].id);
-      setToUnitId(cat.units[1].id);
-    }
-  };
-
-  const applyPreset = (preset: ConversionPreset) => {
-    setMainMode(preset.type);
-    if (preset.type === 'units' && preset.categoryKey) {
-      setSelectedCategoryKey(preset.categoryKey);
-      setUnitInputValue(preset.amount);
-      setFromUnitId(preset.fromId);
-      setToUnitId(preset.toId);
-    } else if (preset.type === 'currencies') {
-      setCurrencyAmount(preset.amount);
-      setFromCurrency(preset.fromId);
-      setToCurrency(preset.toId);
-    }
-  };
-
-  const handleSaveCurrentAsPreset = () => {
-    let newPreset: ConversionPreset;
-    if (mainMode === 'units') {
-      const cat = UNIT_CATEGORIES.find((c) => c.key === selectedCategoryKey) || UNIT_CATEGORIES[0];
-      const fromU = cat.units.find((u) => u.id === fromUnitId) || cat.units[0];
-      const toU = cat.units.find((u) => u.id === toUnitId) || cat.units[1] || cat.units[0];
-
-      newPreset = {
-        id: `preset-${Date.now()}`,
-        label: `${unitInputValue} ${fromU.symbol} → ${toU.symbol}`,
-        type: 'units',
-        categoryKey: selectedCategoryKey,
-        amount: unitInputValue,
-        fromId: fromUnitId,
-        toId: toUnitId,
-      };
+    if (!isCurrencyMode) {
+      recalculateUnitRight(unitLeft, fromUnitObj, toUnitObj, precision);
     } else {
-      newPreset = {
-        id: `preset-${Date.now()}`,
-        label: `${currencyAmount} ${fromCurrency} → ${toCurrency}`,
-        type: 'currencies',
-        amount: currencyAmount,
-        fromId: fromCurrency,
-        toId: toCurrency,
-      };
+      recalculateCurrRight(currLeft, fromCurr, toCurr, rates, precision);
     }
+  }, [selectedCategory, fromUnitId, toUnitId, fromCurr, toCurr, precision, rates]);
 
-    setPresets((prev) => {
-      const isDuplicate = prev.some(
-        (p) =>
-          p.type === newPreset.type &&
-          p.amount === newPreset.amount &&
-          p.fromId === newPreset.fromId &&
-          p.toId === newPreset.toId &&
-          (p.type === 'currencies' || p.categoryKey === newPreset.categoryKey)
-      );
-      if (isDuplicate) return prev;
-      return [newPreset, ...prev];
-    });
-
-    setPresetSavedToast(true);
-    setTimeout(() => setPresetSavedToast(false), 2000);
-  };
-
-  const handleDeletePreset = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setPresets((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const handleExportPresets = () => {
-    if (presets.length === 0) return;
-    const jsonString = JSON.stringify(presets, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `converter-presets-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleImportPresets = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const content = event.target?.result as string;
-        const parsed = JSON.parse(content);
-
-        if (!Array.isArray(parsed)) {
-          setImportToast({ message: 'Помилка: файл повинен містити масив пресетів', isError: true });
-          setTimeout(() => setImportToast(null), 3500);
-          return;
-        }
-
-        const validPresets: ConversionPreset[] = parsed.filter((item: any) => {
-          return (
-            item &&
-            typeof item === 'object' &&
-            typeof item.id === 'string' &&
-            typeof item.label === 'string' &&
-            (item.type === 'units' || item.type === 'currencies') &&
-            typeof item.amount === 'number' &&
-            typeof item.fromId === 'string' &&
-            typeof item.toId === 'string'
-          );
-        });
-
-        if (validPresets.length === 0) {
-          setImportToast({ message: 'У файлі не знайдено коректних пресетів', isError: true });
-          setTimeout(() => setImportToast(null), 3500);
-          return;
-        }
-
-        setPresets((prev) => {
-          const existingIds = new Set(prev.map((p) => p.id));
-          const newItems = validPresets.filter((p) => !existingIds.has(p.id));
-          return [...newItems, ...prev];
-        });
-
-        setImportToast({ message: `Успішно імпортовано ${validPresets.length} пресетів!` });
-        setTimeout(() => setImportToast(null), 3000);
-      } catch (err) {
-        setImportToast({ message: 'Невалідний JSON файл', isError: true });
-        setTimeout(() => setImportToast(null), 3500);
+  // Switch category
+  const handleSelectCategory = (catKey: UnitCategoryKey) => {
+    setSelectedCategory(catKey);
+    if (catKey !== 'currencies') {
+      const cat = UNIT_CATEGORIES.find((c) => c.key === catKey);
+      if (cat && cat.units.length >= 2) {
+        setFromUnitId(cat.units[0].id);
+        setToUnitId(cat.units[1].id);
+        setUnitLeft('1');
+        recalculateUnitRight('1', cat.units[0], cat.units[1], precision);
       }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
+    }
   };
 
-  // --- CALCULATE UNIT RESULT ---
-  const fromUnitObj = currentCategory.units.find((u) => u.id === fromUnitId) || currentCategory.units[0];
-  const toUnitObj = currentCategory.units.find((u) => u.id === toUnitId) || currentCategory.units[1] || currentCategory.units[0];
-
-  const baseVal = fromUnitObj.toBase(unitInputValue || 0);
-  const convertedUnitVal = toUnitObj.fromBase(baseVal);
-
-  const formattedUnitResult = useMemo(() => {
-    if (Number.isInteger(convertedUnitVal)) {
-      return convertedUnitVal.toLocaleString('uk-UA');
+  // Swap Units or Currencies
+  const handleSwap = () => {
+    setSwapRotation((prev) => prev + 180);
+    if (!isCurrencyMode) {
+      const prevFrom = fromUnitId;
+      const prevTo = toUnitId;
+      setFromUnitId(prevTo);
+      setToUnitId(prevFrom);
+      setUnitLeft(unitRight);
+      const newFrom = currentCategoryDef.units.find((u) => u.id === prevTo) || toUnitObj;
+      const newTo = currentCategoryDef.units.find((u) => u.id === prevFrom) || fromUnitObj;
+      recalculateUnitRight(unitRight, newFrom, newTo, precision);
+    } else {
+      const prevFrom = fromCurr;
+      const prevTo = toCurr;
+      setFromCurr(prevTo);
+      setToCurr(prevFrom);
+      setCurrLeft(currRight);
+      recalculateCurrRight(currRight, prevTo, prevFrom, rates, precision);
     }
-    if (Math.abs(convertedUnitVal) < 0.000001 && convertedUnitVal !== 0) {
-      return convertedUnitVal.toExponential(unitPrecision);
-    }
-    const fixedStr = convertedUnitVal.toFixed(unitPrecision);
-    const parts = fixedStr.split('.');
-    const intPart = parseInt(parts[0], 10).toLocaleString('uk-UA');
-    return parts.length > 1 ? `${intPart}.${parts[1]}` : intPart;
-  }, [convertedUnitVal, unitPrecision]);
+  };
 
-  const handleSwapUnits = useCallback(() => {
-    const temp = fromUnitId;
-    setFromUnitId(toUnitId);
-    setToUnitId(temp);
-    setUnitSwapRotation((prev) => prev + 180);
-  }, [fromUnitId, toUnitId]);
-
+  // Keyboard shortcut 'X' to swap
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
-      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
+      const active = (document.activeElement?.tagName || '').toLowerCase();
+      if (active === 'input' || active === 'textarea' || active === 'select') return;
       if (e.key === 'x' || e.key === 'X') {
         e.preventDefault();
-        handleSwapUnits();
+        handleSwap();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSwapUnits]);
+  });
 
-  const copyUnitToClipboard = () => {
-    const text = `${unitInputValue} ${fromUnitObj.symbol} = ${formattedUnitResult} ${toUnitObj.symbol}`;
-    navigator.clipboard.writeText(text);
-    setCopiedUnit(true);
-    setTimeout(() => setCopiedUnit(false), 2000);
-  };
+  // Quick values chips handler
+  const handleQuickValue = (val: number | 'clear' | 'max') => {
+    let newVal = '0';
+    if (val === 'clear') newVal = '0';
+    else if (val === 'max') newVal = '1000000';
+    else newVal = val.toString();
 
-  // --- CALCULATE CURRENCY RESULT ---
-  const fromRate = rates[fromCurrency] || 1;
-  const toRate = rates[toCurrency] || 1;
-  // Convert from currency -> USD -> to currency
-  const convertedCurrencyVal = (currencyAmount / fromRate) * toRate;
-
-  const formattedCurrencyResult =
-    convertedCurrencyVal < 0.01
-      ? convertedCurrencyVal.toFixed(6)
-      : convertedCurrencyVal.toLocaleString(undefined, {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
-
-  const handleSwapCurrencies = () => {
-    const temp = fromCurrency;
-    setFromCurrency(toCurrency);
-    setToCurrency(temp);
-    setCurrencySwapRotation((prev) => prev + 180);
-  };
-
-  const copyCurrencyToClipboard = () => {
-    const fromSymbol = SUPPORTED_CURRENCIES.find((c) => c.code === fromCurrency)?.symbol || '';
-    const toSymbol = SUPPORTED_CURRENCIES.find((c) => c.code === toCurrency)?.symbol || '';
-    const text = `${currencyAmount} ${fromCurrency} (${fromSymbol}) = ${formattedCurrencyResult} ${toCurrency} (${toSymbol})`;
-    navigator.clipboard.writeText(text);
-    setCopiedCurrency(true);
-    setTimeout(() => setCopiedCurrency(false), 2000);
-  };
-
-  // --- AUTOMATIC RECENT HISTORY TRACKING ---
-  useEffect(() => {
-    if (mainMode !== 'units' || !unitInputValue || unitInputValue <= 0) return;
-
-    const timer = setTimeout(() => {
-      const fromSymbol = fromUnitObj?.symbol || fromUnitId;
-      const toSymbol = toUnitObj?.symbol || toUnitId;
-      const label = `${unitInputValue} ${fromSymbol} → ${formattedUnitResult} ${toSymbol}`;
-
-      setRecentHistory((prev) => {
-        const top = prev[0];
-        if (
-          top &&
-          top.type === 'units' &&
-          top.categoryKey === selectedCategoryKey &&
-          top.amount === unitInputValue &&
-          top.fromId === fromUnitId &&
-          top.toId === toUnitId
-        ) {
-          if (top.result === formattedUnitResult) return prev;
-          return [{ ...top, result: formattedUnitResult, label, timestamp: Date.now() }, ...prev.slice(1)];
-        }
-
-        const newEntry: RecentConversion = {
-          id: `recent-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          timestamp: Date.now(),
-          type: 'units',
-          categoryKey: selectedCategoryKey,
-          amount: unitInputValue,
-          fromId: fromUnitId,
-          fromSymbol,
-          toId: toUnitId,
-          toSymbol,
-          result: formattedUnitResult,
-          label,
-        };
-
-        const filtered = prev.filter(
-          (item) =>
-            !(
-              item.type === 'units' &&
-              item.categoryKey === selectedCategoryKey &&
-              item.amount === unitInputValue &&
-              item.fromId === fromUnitId &&
-              item.toId === toUnitId
-            )
-        );
-
-        return [newEntry, ...filtered].slice(0, 10);
-      });
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, [mainMode, selectedCategoryKey, unitInputValue, fromUnitId, toUnitId, formattedUnitResult, fromUnitObj, toUnitObj]);
-
-  useEffect(() => {
-    if (mainMode !== 'currencies' || !currencyAmount || currencyAmount <= 0) return;
-
-    const timer = setTimeout(() => {
-      const fromSymbol = SUPPORTED_CURRENCIES.find((c) => c.code === fromCurrency)?.symbol || fromCurrency;
-      const toSymbol = SUPPORTED_CURRENCIES.find((c) => c.code === toCurrency)?.symbol || toCurrency;
-      const label = `${currencyAmount} ${fromCurrency} → ${formattedCurrencyResult} ${toCurrency}`;
-
-      setRecentHistory((prev) => {
-        const top = prev[0];
-        if (
-          top &&
-          top.type === 'currencies' &&
-          top.amount === currencyAmount &&
-          top.fromId === fromCurrency &&
-          top.toId === toCurrency
-        ) {
-          if (top.result === formattedCurrencyResult) return prev;
-          return [{ ...top, result: formattedCurrencyResult, label, timestamp: Date.now() }, ...prev.slice(1)];
-        }
-
-        const newEntry: RecentConversion = {
-          id: `recent-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          timestamp: Date.now(),
-          type: 'currencies',
-          amount: currencyAmount,
-          fromId: fromCurrency,
-          fromSymbol,
-          toId: toCurrency,
-          toSymbol,
-          result: formattedCurrencyResult,
-          label,
-        };
-
-        const filtered = prev.filter(
-          (item) =>
-            !(
-              item.type === 'currencies' &&
-              item.amount === currencyAmount &&
-              item.fromId === fromCurrency &&
-              item.toId === toCurrency
-            )
-        );
-
-        return [newEntry, ...filtered].slice(0, 10);
-      });
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, [mainMode, currencyAmount, fromCurrency, toCurrency, formattedCurrencyResult]);
-
-  const applyRecentConversion = (item: RecentConversion) => {
-    setMainMode(item.type);
-    if (item.type === 'units' && item.categoryKey) {
-      setSelectedCategoryKey(item.categoryKey);
-      setUnitInputValue(item.amount);
-      setFromUnitId(item.fromId);
-      setToUnitId(item.toId);
-    } else if (item.type === 'currencies') {
-      setCurrencyAmount(item.amount);
-      setFromCurrency(item.fromId);
-      setToCurrency(item.toId);
+    if (!isCurrencyMode) {
+      setUnitLeft(newVal);
+      recalculateUnitRight(newVal, fromUnitObj, toUnitObj, precision);
+    } else {
+      setCurrLeft(newVal);
+      recalculateCurrRight(newVal, fromCurr, toCurr, rates, precision);
     }
   };
 
-  const handleSaveRecentAsPreset = (item: RecentConversion, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const newPreset: ConversionPreset = {
-      id: `preset-${Date.now()}`,
-      label: item.label,
-      type: item.type,
-      categoryKey: item.categoryKey,
-      amount: item.amount,
-      fromId: item.fromId,
-      toId: item.toId,
-    };
+  // Copy result to clipboard
+  const handleCopy = () => {
+    let text = '';
+    if (!isCurrencyMode) {
+      text = `${unitLeft} ${fromUnitObj.symbol} = ${unitRight} ${toUnitObj.symbol}`;
+    } else {
+      text = `${currLeft} ${fromCurr} = ${currRight} ${toCurr}`;
+    }
+    navigator.clipboard.writeText(text);
+    setCopiedToast(true);
+    setTimeout(() => setCopiedToast(false), 2000);
+  };
+
+  // Save current as Preset
+  const handleSavePreset = () => {
+    let newP: ConversionPreset;
+    if (!isCurrencyMode) {
+      newP = {
+        id: `p-${Date.now()}`,
+        label: `${unitLeft} ${fromUnitObj.symbol} → ${toUnitObj.symbol}`,
+        categoryKey: selectedCategory,
+        amount: parseFloat(unitLeft) || 1,
+        fromId: fromUnitId,
+        toId: toUnitId,
+      };
+    } else {
+      newP = {
+        id: `p-${Date.now()}`,
+        label: `${currLeft} ${fromCurr} → ${toCurr}`,
+        categoryKey: 'currencies',
+        amount: parseFloat(currLeft) || 100,
+        fromId: fromCurr,
+        toId: toCurr,
+      };
+    }
 
     setPresets((prev) => {
-      if (prev.some((p) => p.label === newPreset.label)) return prev;
-      return [newPreset, ...prev];
+      const exists = prev.some((p) => p.label === newP.label);
+      if (exists) return prev;
+      return [newP, ...prev];
     });
 
-    setPresetSavedToast(true);
-    setTimeout(() => setPresetSavedToast(false), 2000);
+    setPresetToast('Збережено в пресети!');
+    setTimeout(() => setPresetToast(null), 2000);
   };
 
-  const handleDeleteHistoryItem = (id: string, e: React.MouseEvent) => {
+  // Apply Preset
+  const applyPreset = (p: ConversionPreset) => {
+    setSelectedCategory(p.categoryKey);
+    if (p.categoryKey === 'currencies') {
+      setFromCurr(p.fromId);
+      setToCurr(p.toId);
+      setCurrLeft(p.amount.toString());
+      recalculateCurrRight(p.amount.toString(), p.fromId, p.toId, rates, precision);
+    } else {
+      setFromUnitId(p.fromId);
+      setToUnitId(p.toId);
+      setUnitLeft(p.amount.toString());
+      const cat = UNIT_CATEGORIES.find((c) => c.key === p.categoryKey);
+      const fU = cat?.units.find((u) => u.id === p.fromId) || fromUnitObj;
+      const tU = cat?.units.find((u) => u.id === p.toId) || toUnitObj;
+      recalculateUnitRight(p.amount.toString(), fU, tU, precision);
+    }
+  };
+
+  // Delete preset
+  const deletePreset = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setRecentHistory((prev) => prev.filter((item) => item.id !== id));
+    setPresets((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const handleClearHistory = () => {
-    setRecentHistory([]);
+  // Export Presets JSON
+  const handleExport = () => {
+    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(presets, null, 2));
+    const a = document.createElement('a');
+    a.href = dataStr;
+    a.download = `converter_presets_${Date.now()}.json`;
+    a.click();
+    setShowSettingsMenu(false);
   };
+
+  // Import Presets JSON
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const parsed = JSON.parse(evt.target?.result as string);
+        if (Array.isArray(parsed)) {
+          setPresets((prev) => {
+            const ids = new Set(prev.map((p) => p.id));
+            const fresh = parsed.filter((p: any) => p && p.label && !ids.has(p.id));
+            return [...fresh, ...prev];
+          });
+          setPresetToast(`Імпортовано ${parsed.length} пресетів!`);
+          setTimeout(() => setPresetToast(null), 2500);
+        }
+      } catch {
+        setPresetToast('Помилка читання JSON');
+        setTimeout(() => setPresetToast(null), 2500);
+      }
+    };
+    reader.readAsText(file);
+    setShowSettingsMenu(false);
+  };
+
+  // Clear All Presets
+  const handleClearPresets = () => {
+    if (confirm('Ви дійсно бажаєте видалити всі збережені пресети?')) {
+      setPresets([]);
+      setShowSettingsMenu(false);
+    }
+  };
+
+  // Formula Hint Text with Clean Standard
+  const formulaHint = useMemo(() => {
+    if (!isCurrencyMode) {
+      const base = fromUnitObj.toBase(1);
+      const rate = toUnitObj.fromBase(base);
+      return `1 ${fromUnitObj.symbol} = ${formatNumber(rate, precision)} ${toUnitObj.symbol}`;
+    } else {
+      const fR = rates[fromCurr] || 1;
+      const tR = rates[toCurr] || 1;
+      const rate = (1 / fR) * tR;
+      return `1 ${fromCurr} = ${formatNumber(rate, precision)} ${toCurr} • ${lastRateUpdate}`;
+    }
+  }, [isCurrencyMode, fromUnitObj, toUnitObj, fromCurr, toCurr, rates, lastRateUpdate, precision, formatNumber]);
 
   return (
     <div
-      className={`unit-and-currency-converter backdrop-blur-3xl rounded-[32px] border p-6 md:p-8 transition-colors duration-300 ${
+      className={`unit-and-currency-converter backdrop-blur-3xl rounded-[32px] border p-5 sm:p-7 transition-all ${
         isDarkTheme
-          ? 'bg-white/[0.07] text-white border-white/20 shadow-[0_25px_60px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.35)]'
-          : 'bg-white/85 text-slate-900 border-white/80 shadow-[0_20px_50px_rgba(0,0,0,0.15),inset_0_1px_2px_rgba(255,255,255,1)]'
+          ? 'bg-white/[0.05] text-white border-white/15 shadow-[0_25px_60px_rgba(0,0,0,0.5)]'
+          : 'bg-white text-slate-900 border-slate-200 shadow-xl'
       }`}
     >
-      
-      {/* Top Header & Switcher */}
-      <div
-        className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 pb-5 border-b transition-colors ${
-          isDarkTheme ? 'border-white/15' : 'border-slate-200'
-        }`}
-      >
+      {/* 1. TOP HEADER & DRAWER TOGGLE BUTTONS */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-white/10">
         <div className="flex items-center gap-3">
           <div
-            className={`p-3 rounded-2xl border shadow-sm transition-colors ${
-              isDarkTheme
-                ? 'bg-gradient-to-br from-blue-500/30 to-sky-400/20 border-blue-400/40 text-sky-300'
-                : 'bg-blue-50 border-blue-200 text-blue-600'
+            className={`w-10 h-10 rounded-2xl flex items-center justify-center border shadow-inner ${
+              isCurrencyMode
+                ? 'bg-gradient-to-tr from-amber-500/25 to-yellow-500/25 border-amber-400/40 text-amber-300'
+                : 'bg-gradient-to-tr from-blue-500/25 to-sky-400/25 border-blue-400/40 text-sky-300'
             }`}
           >
-            {mainMode === 'units' ? (
-              <Calculator className="w-6 h-6" />
-            ) : (
-              <Coins className={`w-6 h-6 ${isDarkTheme ? 'text-amber-300' : 'text-amber-600'}`} />
-            )}
+            {isCurrencyMode ? <Coins className="w-5 h-5" /> : <Calculator className="w-5 h-5" />}
           </div>
           <div>
-            <h2 className={`text-lg font-bold tracking-tight ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>
-              {mainMode === 'units' ? 'Інтерактивний Конвертер Величин' : 'Онлайн Конвертер Валют'}
+            <h2 className="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+              {isCurrencyMode ? 'Конвертер Валют' : `Конвертер: ${currentCategoryDef.label}`}
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-slate-300">
+                Two-Way Sync
+              </span>
             </h2>
-            <p className={`text-xs ${isDarkTheme ? 'text-slate-300/80' : 'text-slate-500'}`}>
-              {mainMode === 'units'
-                ? 'Миттєве обчислення фізичних одиниць (довжина, маса, площа, температура, дані)'
-                : 'Актуальні курси валют з миттєвим перерахунком (UAH, USD, EUR, PLN, BTC)'}
+            <p className="text-xs text-slate-400">
+              {isCurrencyMode
+                ? 'Миттєвий розрахунок за курсами НБУ та світових бірж'
+                : 'Точний розрахунок фізичних та цифрових величин'}
             </p>
           </div>
         </div>
 
-        {/* Controls: Mode Switcher + Dark/Light Theme Toggle */}
-        <div className="flex items-center gap-2">
-          {/* Main Mode Toggle Buttons */}
-          <div
-            className={`flex items-center gap-1.5 p-1.5 rounded-2xl border backdrop-blur-2xl transition-colors ${
-              isDarkTheme ? 'bg-black/40 border-white/15' : 'bg-slate-100 border-slate-200/80'
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => setMainMode('units')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
-                mainMode === 'units'
-                  ? 'bg-gradient-to-b from-blue-500 to-blue-600 text-white border border-blue-300/40 shadow-[0_8px_20px_rgba(37,99,235,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)]'
-                  : isDarkTheme
-                  ? 'text-slate-300 hover:text-white hover:bg-white/10'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
-              }`}
-            >
-              <Calculator className={`w-4 h-4 ${mainMode === 'units' ? 'text-sky-200' : 'text-slate-400'}`} />
-              <span>Величини</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setMainMode('currencies')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold transition-all active:scale-95 ${
-                mainMode === 'currencies'
-                  ? 'bg-gradient-to-b from-amber-500 to-amber-600 text-white border border-amber-300/40 shadow-[0_8px_20px_rgba(217,119,6,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)]'
-                  : isDarkTheme
-                  ? 'text-slate-300 hover:text-white hover:bg-white/10'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
-              }`}
-            >
-              <Coins className={`w-4 h-4 ${mainMode === 'currencies' ? 'text-amber-200' : 'text-slate-400'}`} />
-              <span>Валюти</span>
-            </button>
-          </div>
-
-          {/* Theme Mode Toggle Button */}
+        {/* Action Controls: Presets Drawer + Settings ⋮ */}
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          {/* Presets Accordion Button */}
           <button
             type="button"
-            onClick={toggleTheme}
-            className={`p-2 sm:p-2.5 rounded-2xl border transition-all active:scale-95 flex items-center justify-center gap-1.5 text-xs font-bold ${
-              isDarkTheme
-                ? 'bg-amber-500/20 text-amber-300 border-amber-400/30 hover:bg-amber-500/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
-                : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 shadow-sm'
+            onClick={() => setExpandedDrawer((prev) => (prev === 'presets' ? 'none' : 'presets'))}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+              expandedDrawer === 'presets'
+                ? 'bg-amber-500/25 text-amber-200 border-amber-400/40 shadow-xs'
+                : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
             }`}
-            title={isDarkTheme ? 'Переключити на світлу тему' : 'Переключити на темну тему'}
           >
-            {isDarkTheme ? (
-              <>
-                <Sun className="w-4 h-4 text-amber-300" />
-                <span className="hidden sm:inline">Світла</span>
-              </>
-            ) : (
-              <>
-                <Moon className="w-4 h-4 text-indigo-600" />
-                <span className="hidden sm:inline">Темна</span>
-              </>
-            )}
+            <Bookmark className="w-3.5 h-3.5 text-amber-400" />
+            <span>★ Пресети ({presets.length})</span>
+            {expandedDrawer === 'presets' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3 opacity-60" />}
           </button>
-        </div>
-      </div>
 
-      {/* PRESETS AND HISTORY BAR SECTION */}
-      <div
-        className={`mb-6 p-4 rounded-2xl border backdrop-blur-2xl transition-colors ${
-          isDarkTheme ? 'bg-black/25 border-white/15' : 'bg-slate-50/90 border-slate-200 shadow-xs'
-        }`}
-      >
-        {/* Top Header & Tab switcher */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 pb-3 border-b border-white/10 transition-colors">
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/20 border border-white/10">
+          {/* Settings Menu (Export / Import / Clear) */}
+          <div className="relative" ref={settingsMenuRef}>
             <button
               type="button"
-              onClick={() => setSavedTab('presets')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 ${
-                savedTab === 'presets'
-                  ? isDarkTheme
-                    ? 'bg-amber-500/30 text-amber-200 border border-amber-400/40 shadow-xs'
-                    : 'bg-amber-500 text-white font-bold shadow-xs'
-                  : isDarkTheme
-                  ? 'text-slate-300 hover:text-white'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              onClick={() => setShowSettingsMenu((prev) => !prev)}
+              className="p-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-all active:scale-95"
+              title="Налаштування пресетів"
             >
-              <Bookmark className="w-3.5 h-3.5" />
-              <span>Збережені пресети ({presets.length})</span>
+              <MoreVertical className="w-4 h-4" />
             </button>
 
-            <button
-              type="button"
-              onClick={() => setSavedTab('history')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 ${
-                savedTab === 'history'
-                  ? isDarkTheme
-                    ? 'bg-blue-500/30 text-sky-200 border border-blue-400/40 shadow-xs'
-                    : 'bg-blue-600 text-white font-bold shadow-xs'
-                  : isDarkTheme
-                  ? 'text-slate-300 hover:text-white'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <History className="w-3.5 h-3.5" />
-              <span>Останні обчислення ({recentHistory.length})</span>
-            </button>
-          </div>
+            {showSettingsMenu && (
+              <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-slate-900/95 border border-white/15 shadow-2xl p-1.5 z-30 text-xs text-slate-200 space-y-1 backdrop-blur-xl animate-in fade-in">
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-left"
+                >
+                  <Download className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Експортувати JSON</span>
+                </button>
 
-          {/* Action Buttons Depending on Tab */}
-          {savedTab === 'presets' ? (
-            <div className="flex items-center gap-1.5 flex-wrap justify-end">
-              <button
-                type="button"
-                onClick={handleExportPresets}
-                disabled={presets.length === 0}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-xl border transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-                  isDarkTheme
-                    ? 'bg-white/10 hover:bg-white/20 text-slate-200 border-white/15'
-                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 shadow-xs'
-                }`}
-                title="Експортувати пресети у JSON файл"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Експорт</span>
-              </button>
+                <label className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors text-left cursor-pointer">
+                  <Upload className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Імпортувати JSON</span>
+                  <input type="file" accept=".json" onChange={handleImport} className="hidden" />
+                </label>
 
-              <label
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-xl border transition-all active:scale-95 cursor-pointer ${
-                  isDarkTheme
-                    ? 'bg-white/10 hover:bg-white/20 text-slate-200 border-white/15'
-                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 shadow-xs'
-                }`}
-                title="Імпортувати пресети з JSON файлу"
-              >
-                <Upload className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Імпорт</span>
-                <input
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={handleImportPresets}
-                  className="hidden"
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={handleSaveCurrentAsPreset}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all active:scale-95 ${
-                  presetSavedToast
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40'
-                    : isDarkTheme
-                    ? 'bg-blue-500/20 hover:bg-blue-500/30 text-sky-200 border-blue-400/30'
-                    : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300 shadow-xs'
-                }`}
-                title="Зберегти поточну конфігурацію як пресет"
-              >
-                {presetSavedToast ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Збережено!</span>
-                  </>
-                ) : (
-                  <>
-                    <BookmarkPlus className="w-3.5 h-3.5" />
-                    <span>+ Зберегти</span>
-                  </>
-                )}
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 justify-end">
-              <button
-                type="button"
-                onClick={handleClearHistory}
-                disabled={recentHistory.length === 0}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-                  isDarkTheme
-                    ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300 border-red-500/30'
-                    : 'bg-red-50 hover:bg-red-100 text-red-700 border-red-200 shadow-xs'
-                }`}
-                title="Очистити історію останніх конверсій"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Очистити історію</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {importToast && (
-          <div
-            className={`mb-3 px-3 py-2 text-xs font-semibold rounded-xl border flex items-center justify-between transition-all ${
-              importToast.isError
-                ? isDarkTheme
-                  ? 'bg-red-500/20 text-red-200 border-red-400/40'
-                  : 'bg-red-50 text-red-700 border-red-200'
-                : isDarkTheme
-                ? 'bg-emerald-500/20 text-emerald-200 border-emerald-400/40'
-                : 'bg-emerald-50 text-emerald-800 border-emerald-200'
-            }`}
-          >
-            <span>{importToast.message}</span>
-            <button
-              type="button"
-              onClick={() => setImportToast(null)}
-              className="p-0.5 rounded hover:opacity-75"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
-
-        {/* TAB 1: PRESETS CONTENT */}
-        {savedTab === 'presets' && (
-          <div>
-            {presets.length === 0 ? (
-              <div className={`p-4 rounded-2xl border text-center space-y-2.5 transition-colors ${isDarkTheme ? 'bg-black/30 border-white/10' : 'bg-slate-100/80 border-slate-200'}`}>
-                <p className={`text-xs flex items-center justify-center gap-1.5 ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
-                  <Lock className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Зберігається 100% локально у вашому браузері</span>
-                </p>
-                <div className="flex items-center justify-center gap-3 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setPresets(DEFAULT_PRESETS)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all active:scale-95 ${
-                      isDarkTheme
-                        ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border-amber-400/30'
-                        : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300'
-                    }`}
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    Завантажити початкові приклади (5 пресетів)
-                  </button>
-                </div>
-              </div>
-            ) : (
-
-              <div>
-                {/* Category Filter Selector */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-3 scrollbar-none">
-                  <span className={`text-[11px] font-semibold flex items-center gap-1 shrink-0 mr-1 ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
-                    <Filter className="w-3 h-3" />
-                    Категорія:
-                  </span>
-                  {PRESET_CATEGORY_OPTIONS.map((cat) => {
-                    const count = presetCounts[cat.id] || 0;
-                    if (cat.id !== 'all' && count === 0 && presetCategoryFilter !== cat.id) return null;
-
-                    const isSelected = presetCategoryFilter === cat.id;
-                    const CatIcon = cat.icon;
-
-                    return (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setPresetCategoryFilter(cat.id)}
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold whitespace-nowrap border transition-all active:scale-95 ${
-                          isSelected
-                            ? isDarkTheme
-                              ? 'bg-amber-500/30 text-amber-200 border-amber-400/50 font-bold shadow-xs'
-                              : 'bg-amber-500 text-white border-amber-600 font-bold shadow-xs'
-                            : isDarkTheme
-                            ? 'bg-white/10 hover:bg-white/20 text-slate-200 border-white/15'
-                            : 'bg-white hover:bg-slate-200 text-slate-700 border-slate-200 shadow-2xs'
-                        }`}
-                      >
-                        <CatIcon className="w-3 h-3" />
-                        <span>{cat.label}</span>
-                        <span
-                          className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-                            isSelected
-                              ? isDarkTheme
-                                ? 'bg-amber-400/30 text-amber-100'
-                                : 'bg-amber-700 text-amber-100'
-                              : isDarkTheme
-                              ? 'bg-slate-800 text-slate-300'
-                              : 'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          {count}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {filteredPresets.length === 0 ? (
-                  <p className={`text-xs italic ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
-                    У цій категорії немає збережених пресетів.
-                  </p>
-                ) : (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {filteredPresets.map((p) => {
-                      const isActive =
-                        p.type === mainMode &&
-                        (p.type === 'units'
-                          ? p.categoryKey === selectedCategoryKey &&
-                            p.amount === unitInputValue &&
-                            p.fromId === fromUnitId &&
-                            p.toId === toUnitId
-                          : p.amount === currencyAmount &&
-                            p.fromId === fromCurrency &&
-                            p.toId === toCurrency);
-
-                      const categoryLabel =
-                        p.type === 'currencies'
-                          ? 'Валюта'
-                          : UNIT_CATEGORIES.find((c) => c.key === p.categoryKey)?.label || 'Одиниця';
-
-                      return (
-                        <div
-                          key={p.id}
-                          onClick={() => applyPreset(p)}
-                          className={`group relative inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer border transition-all active:scale-95 ${
-                            isActive
-                              ? isDarkTheme
-                                ? 'bg-amber-500/30 text-amber-200 border-amber-400/50 shadow-[0_4px_12px_rgba(217,119,6,0.3)]'
-                                : 'bg-amber-100 text-amber-900 border-amber-300 font-bold shadow-xs'
-                              : isDarkTheme
-                              ? 'bg-white/10 hover:bg-white/20 text-slate-200 border-white/15'
-                              : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-200 shadow-xs'
-                          }`}
-                          title={`Клацніть, щоб застосувати: ${p.label}`}
-                        >
-                          <span
-                            className={`text-[9px] uppercase font-mono px-1.5 py-0.5 rounded font-bold ${
-                              p.type === 'currencies'
-                                ? isDarkTheme
-                                  ? 'bg-amber-500/20 text-amber-300'
-                                  : 'bg-amber-50 text-amber-700'
-                                : isDarkTheme
-                                ? 'bg-blue-500/20 text-sky-300'
-                                : 'bg-blue-50 text-blue-700'
-                            }`}
-                          >
-                            {categoryLabel}
-                          </span>
-                          <span className="font-mono font-bold">{p.label}</span>
-
-                          <button
-                            type="button"
-                            onClick={(e) => handleDeletePreset(p.id, e)}
-                            className={`p-1 rounded-lg transition-colors ${
-                              isDarkTheme
-                                ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/20'
-                                : 'text-slate-400 hover:text-red-600 hover:bg-red-50'
-                            }`}
-                            title="Видалити пресет"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={handleClearPresets}
+                  className="w-full flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-rose-500/20 text-rose-400 transition-colors text-left"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Очистити всі пресети</span>
+                </button>
               </div>
             )}
           </div>
-        )}
+        </div>
+      </div>
 
-        {/* TAB 2: RECENT HISTORY CONTENT */}
-        {savedTab === 'history' && (
-          <div>
-            {recentHistory.length === 0 ? (
-              <p className={`text-xs italic ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
-                Історія порожня. Виконайте будь-яку конверсію, і вона автоматично збережеться тут (до 10 останніх дій).
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {recentHistory.map((item) => {
-                  const categoryLabel =
-                    item.type === 'currencies'
-                      ? 'Валюта'
-                      : UNIT_CATEGORIES.find((c) => c.key === item.categoryKey)?.label || 'Одиниця';
+      {/* 2. COLLAPSIBLE PRESETS DRAWER (Only when expanded) */}
+      <AnimatePresence>
+        {expandedDrawer === 'presets' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-5 overflow-hidden"
+          >
+            <div className="p-3.5 rounded-2xl bg-black/30 border border-white/10 space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 px-1">
+                <span>Швидкі пресети для розрахунку:</span>
+                <span className="text-[10px] text-slate-500">Клікніть для застосування</span>
+              </div>
 
-                  const timeStr = new Date(item.timestamp).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit',
-                  });
-
-                  return (
+              {presets.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {presets.map((p) => (
                     <div
-                      key={item.id}
-                      onClick={() => applyRecentConversion(item)}
-                      className={`group relative flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold cursor-pointer border transition-all active:scale-98 ${
-                        isDarkTheme
-                          ? 'bg-white/5 hover:bg-white/15 text-slate-200 border-white/10'
-                          : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-200 shadow-2xs'
-                      }`}
-                      title="Клацніть, щоб відновити цей розрахунок"
+                      key={p.id}
+                      onClick={() => applyPreset(p)}
+                      className="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] border border-white/10 hover:border-amber-400/40 cursor-pointer transition-all active:scale-95 text-xs font-semibold text-slate-200"
                     >
-                      <div className="flex items-center gap-2 min-w-0 pr-2">
-                        <span
-                          className={`shrink-0 text-[9px] uppercase font-mono px-1.5 py-0.5 rounded font-bold ${
-                            item.type === 'currencies'
-                              ? isDarkTheme
-                                ? 'bg-amber-500/20 text-amber-300'
-                                : 'bg-amber-50 text-amber-700'
-                              : isDarkTheme
-                              ? 'bg-blue-500/20 text-sky-300'
-                              : 'bg-blue-50 text-blue-700'
-                          }`}
-                        >
-                          {categoryLabel}
-                        </span>
-
-                        <div className="truncate">
-                          <span className="font-mono font-bold block truncate">{item.label}</span>
-                          <span className={`text-[10px] font-mono ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {timeStr}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={(e) => handleSaveRecentAsPreset(item, e)}
-                          className={`p-1.5 rounded-lg text-[10px] font-bold transition-colors flex items-center gap-1 ${
-                            isDarkTheme
-                              ? 'text-sky-300 hover:bg-sky-500/20'
-                              : 'text-blue-600 hover:bg-blue-50'
-                          }`}
-                          title="Зберегти як постійний пресет"
-                        >
-                          <BookmarkPlus className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => handleDeleteHistoryItem(item.id, e)}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            isDarkTheme
-                              ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/20'
-                              : 'text-slate-400 hover:text-red-600 hover:bg-red-50'
-                          }`}
-                          title="Видалити з історії"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      <span>{p.label}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => deletePreset(p.id, e)}
+                        className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-400 transition-opacity"
+                        title="Видалити"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400 text-center py-2">
+                  Немає збережених пресетів. Додайте свій за допомогою кнопки «Зберегти в пресети».
+                </p>
+              )}
+            </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
 
-      {/* MODE 1: UNITS CONVERTER */}
-      {mainMode === 'units' && (
-        <div>
-          {/* Category Selector Bar - Scrollable on mobile */}
-          <div className="flex overflow-x-auto pb-2 sm:pb-0 sm:flex-wrap items-center gap-2 mb-6 no-scrollbar -mx-1 px-1">
-            {UNIT_CATEGORIES.map((cat) => {
-              const Icon = cat.icon;
-              const isSelected = selectedCategoryKey === cat.key;
-              return (
-                <button
-                  key={cat.key}
-                  type="button"
-                  onClick={() => handleSelectCategory(cat.key)}
-                  className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 border flex-shrink-0 ${
-                    isSelected
-                      ? isDarkTheme
-                        ? 'bg-blue-500/30 text-white border-blue-400/50 shadow-[0_6px_15px_rgba(37,99,235,0.3),inset_0_1px_0_rgba(255,255,255,0.3)]'
-                        : 'bg-blue-600 text-white border-blue-700 shadow-md'
-                      : isDarkTheme
-                      ? 'bg-black/20 text-slate-300 border-white/10 hover:bg-white/10 hover:text-white'
-                      : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200 hover:text-slate-900'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isSelected ? (isDarkTheme ? 'text-sky-300' : 'text-white') : isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`} />
-                  <span>{cat.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Calculator Inputs Card */}
-          <div
-            className={`grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-5 rounded-2xl border backdrop-blur-2xl transition-colors ${
-              isDarkTheme
-                ? 'bg-black/20 border-white/15'
-                : 'bg-slate-50/80 border-slate-200/90 shadow-sm'
+      {/* 3. SINGLE UNIFIED CATEGORY ROW (No extra floor!) */}
+      <div className="mb-5">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
+          {/* Currencies Button */}
+          <button
+            type="button"
+            onClick={() => handleSelectCategory('currencies')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-bold border transition-all active:scale-95 shrink-0 ${
+              isCurrencyMode
+                ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-slate-950 border-amber-300 shadow-md'
+                : 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border-white/10'
             }`}
           >
-            {/* Input Value & Source Unit */}
-            <div className="md:col-span-5 space-y-2">
-              <label className={`block text-xs font-semibold uppercase tracking-wider ${isDarkTheme ? 'text-slate-300' : 'text-slate-600'}`}>
-                Початкове значення
-              </label>
-              <div className="flex items-center gap-2">
-                <div className="relative w-full">
-                  <input
-                    type="number"
-                    value={unitInputValue}
-                    onChange={(e) => setUnitInputValue(parseFloat(e.target.value) || 0)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        copyUnitToClipboard();
-                        (e.target as HTMLElement).blur();
-                      }
-                    }}
-                    className={`w-full font-mono font-bold text-lg px-4 py-3 ${unitInputValue !== 0 ? 'pr-9' : ''} rounded-2xl border outline-none transition-colors ${
-                      isDarkTheme
-                        ? 'bg-slate-900/90 text-white border-white/20 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30'
-                        : 'bg-white text-slate-900 border-slate-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 shadow-inner'
-                    }`}
-                    placeholder="0"
-                  />
-                  {unitInputValue !== 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setUnitInputValue(0)}
-                      className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full transition-all active:scale-95 ${
-                        isDarkTheme
-                          ? 'text-slate-400 hover:text-white hover:bg-white/20'
-                          : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200'
-                      }`}
-                      title="Очистити поле"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-                <select
-                  value={fromUnitId}
-                  onChange={(e) => setFromUnitId(e.target.value)}
-                  className={`text-xs font-bold px-3 py-3 rounded-2xl border cursor-pointer outline-none min-w-[160px] sm:min-w-[185px] max-w-[200px] transition-colors ${
-                    isDarkTheme
-                      ? 'bg-slate-900/90 text-white border-white/20 hover:border-white/40'
-                      : 'bg-white text-slate-800 border-slate-300 hover:border-slate-400'
-                  }`}
-                >
-                  {currentCategory.units.map((u) => (
-                    <option key={u.id} value={u.id} className={isDarkTheme ? 'bg-slate-900 text-white' : 'bg-white text-slate-800'}>
-                      {u.name} ({u.symbol})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            <Coins className="w-4 h-4" />
+            <span>Валюти</span>
+          </button>
 
-            {/* Swap Button */}
-            <div className="md:col-span-2 flex justify-center py-2 md:py-0">
-              <motion.button
-                type="button"
-                onClick={handleSwapUnits}
-                whileTap={{ scale: 0.92 }}
-                aria-label="Поміняти місцями початкову та цільову одиниці"
-                className={`group p-3.5 rounded-2xl border transition-all ${
-                  isDarkTheme
-                    ? 'bg-white/10 hover:bg-blue-500/30 border-white/20 text-sky-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
-                    : 'bg-white hover:bg-blue-50 border-slate-300 text-blue-600 shadow-sm'
-                }`}
-                title="Поміняти місцями одиниці (Клавіша X)"
-              >
-                <motion.div
-                  animate={{ rotate: unitSwapRotation }}
-                  transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-                  className="flex items-center justify-center"
-                >
-                  <ArrowLeftRight className="w-5 h-5" />
-                </motion.div>
-              </motion.button>
-            </div>
-
-            {/* Output Result & Target Unit */}
-            <div className="md:col-span-5 space-y-2">
-              <label className={`block text-xs font-semibold uppercase tracking-wider flex items-center justify-between ${isDarkTheme ? 'text-slate-300' : 'text-slate-600'}`}>
-                <span>Результат</span>
-                <span className={`text-[10px] font-mono ${isDarkTheme ? 'text-sky-300' : 'text-blue-600 font-bold'}`}>
-                  1 {fromUnitObj.symbol} = {toUnitObj.fromBase(fromUnitObj.toBase(1)).toFixed(4)} {toUnitObj.symbol}
-                </span>
-              </label>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-full font-mono font-bold text-lg px-4 py-3 rounded-2xl border flex items-center justify-between overflow-x-auto ${
-                    isDarkTheme
-                      ? 'bg-slate-950/90 text-emerald-300 border-emerald-500/30'
-                      : 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-inner'
-                  }`}
-                >
-                  <span className="truncate">{formattedUnitResult}</span>
-                  <span className={`text-xs font-normal ml-2 ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>{toUnitObj.symbol}</span>
-                </div>
-                <select
-                  value={toUnitId}
-                  onChange={(e) => setToUnitId(e.target.value)}
-                  className={`text-xs font-bold px-3 py-3 rounded-2xl border cursor-pointer outline-none min-w-[160px] sm:min-w-[185px] max-w-[200px] transition-colors ${
-                    isDarkTheme
-                      ? 'bg-slate-900/90 text-white border-white/20 hover:border-white/40'
-                      : 'bg-white text-slate-800 border-slate-300 hover:border-slate-400'
-                  }`}
-                >
-                  {currentCategory.units.map((u) => (
-                    <option key={u.id} value={u.id} className={isDarkTheme ? 'bg-slate-900 text-white' : 'bg-white text-slate-800'}>
-                      {u.name} ({u.symbol})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Presets & Copy Bar */}
-          <div className={`mt-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t ${isDarkTheme ? 'border-white/10' : 'border-slate-200'}`}>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className={`text-xs mr-1 ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>Швидкі значення:</span>
-              {[1, 10, 100, 1000].map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setUnitInputValue(preset)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all active:scale-95 ${
-                    isDarkTheme
-                      ? 'bg-white/10 hover:bg-white/20 text-slate-200 border-white/15'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                  }`}
-                >
-                  {preset}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* All Physical Unit Categories */}
+          {UNIT_CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            const isSelected = selectedCategory === cat.key;
+            return (
               <button
+                key={cat.key}
                 type="button"
-                onClick={handleSaveCurrentAsPreset}
-                className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 flex-1 sm:flex-initial ${
-                  isDarkTheme
-                    ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border-amber-400/30'
-                    : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-300 shadow-xs'
-                }`}
-                title="Зберегти поточний обмін у пресети"
-              >
-                <BookmarkPlus className="w-3.5 h-3.5" />
-                <span>+ Пресет</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={copyUnitToClipboard}
-                className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 flex-1 sm:flex-initial ${
-                  isDarkTheme
-                    ? 'bg-blue-500/20 hover:bg-blue-500/30 text-sky-200 border-blue-400/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-700 shadow-sm'
+                onClick={() => handleSelectCategory(cat.key)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-xs font-bold border transition-all active:scale-95 shrink-0 ${
+                  isSelected
+                    ? 'bg-gradient-to-r from-blue-500 to-sky-500 text-white border-blue-400 shadow-md'
+                    : 'bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 border-white/10'
                 }`}
               >
-                {copiedUnit ? <Check className={`w-4 h-4 ${isDarkTheme ? 'text-emerald-400' : 'text-white'}`} /> : <Copy className="w-4 h-4" />}
-                <span>{copiedUnit ? 'Скопійовано!' : 'Скопіювати результат'}</span>
+                <Icon className="w-4 h-4" />
+                <span>{cat.label}</span>
               </button>
-            </div>
-          </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
-      {/* MODE 2: CURRENCY CONVERTER */}
-      {mainMode === 'currencies' && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className={`flex items-center gap-2 text-xs ${isDarkTheme ? 'text-slate-300' : 'text-slate-600'}`}>
-              <TrendingUp className={`w-4 h-4 ${isDarkTheme ? 'text-amber-300' : 'text-amber-600'}`} />
-              <span>Курс за даними міжбанківського ринку</span>
-            </div>
+      {/* 4. MONOLITHIC INTERACTIVE CALCULATOR (Two-way binding on both sides) */}
+      <div className="p-4 sm:p-6 rounded-3xl bg-black/40 border border-white/15 shadow-inner space-y-4">
+        {/* Formula Hint Header with Online/Offline Status */}
+        <div className="flex items-center justify-between text-xs px-1 pr-2">
+          <div className="font-mono text-slate-300 font-semibold flex items-center gap-2">
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                isCurrencyMode && !isOnline ? 'bg-amber-400' : 'bg-emerald-400 animate-pulse'
+              }`}
+            />
+            <span>
+              {formulaHint}
+              {isCurrencyMode && !isOnline && ' • Офлайн-режим'}
+            </span>
+          </div>
 
+          {isCurrencyMode && (
             <button
               type="button"
               onClick={fetchLiveRates}
               disabled={isFetchingRates}
-              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-semibold border transition-all disabled:opacity-50 ${
-                isDarkTheme
-                  ? 'bg-white/10 hover:bg-white/20 text-slate-200 border-white/15'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
-              }`}
+              className="text-[11px] font-semibold text-sky-400 hover:text-sky-300 inline-flex items-center gap-1.5 disabled:opacity-50 transition-colors pr-1 active:scale-95"
+              title="Оновити курс валют"
             >
-              <RefreshCw className={`w-3 h-3 ${isFetchingRates ? 'animate-spin text-amber-500' : ''}`} />
-              <span>{lastRateUpdate}</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isFetchingRates ? 'animate-spin' : ''}`} />
+              <span>Оновити курс</span>
+            </button>
+          )}
+        </div>
+
+        {/* Dual Interactive Input Fields with Perfectly Centered Reverse Button */}
+        <div className="grid grid-cols-1 md:grid-cols-11 gap-3 items-center">
+          {/* Left Block (Input / Output) */}
+          <div className="md:col-span-5 p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-400/20 transition-all space-y-1.5">
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              Початкове значення:
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                step="any"
+                value={isCurrencyMode ? currLeft : unitLeft}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (isCurrencyMode) {
+                    setCurrLeft(val);
+                    recalculateCurrRight(val, fromCurr, toCurr, rates, precision);
+                  } else {
+                    setUnitLeft(val);
+                    recalculateUnitRight(val, fromUnitObj, toUnitObj, precision);
+                  }
+                }}
+                className="w-full text-xl sm:text-2xl font-bold font-mono bg-transparent outline-none text-white placeholder:text-slate-600"
+                placeholder="0"
+              />
+
+              {/* Selector */}
+              {isCurrencyMode ? (
+                <select
+                  value={fromCurr}
+                  onChange={(e) => setFromCurr(e.target.value)}
+                  className="bg-black/60 border border-white/20 rounded-xl px-2.5 py-1.5 text-xs font-bold text-amber-200 outline-none cursor-pointer"
+                >
+                  {SUPPORTED_CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code} className="bg-slate-900 text-white">
+                      {c.flag} {c.code} ({c.symbol})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <select
+                  value={fromUnitId}
+                  onChange={(e) => setFromUnitId(e.target.value)}
+                  className="bg-black/60 border border-white/20 rounded-xl px-2.5 py-1.5 text-xs font-bold text-sky-200 outline-none cursor-pointer"
+                >
+                  {currentCategoryDef.units.map((u) => (
+                    <option key={u.id} value={u.id} className="bg-slate-900 text-white">
+                      {u.name} ({u.symbol})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+
+          {/* Center Reverse / Swap Button — Vertically Centered on Inputs via md:pt-5 */}
+          <div className="md:col-span-1 flex items-center justify-center md:pt-5">
+            <button
+              type="button"
+              onClick={handleSwap}
+              className="p-3 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white shadow-lg transition-all active:scale-90"
+              title="Поміняти місцями (Гаряча клавіша: X)"
+            >
+              <motion.div animate={{ rotate: swapRotation }} transition={{ duration: 0.3 }}>
+                <ArrowLeftRight className="w-4 h-4" />
+              </motion.div>
             </button>
           </div>
 
-          {/* Calculator Inputs */}
-          <div
-            className={`grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-5 rounded-2xl border backdrop-blur-2xl transition-colors ${
-              isDarkTheme
-                ? 'bg-black/20 border-white/15'
-                : 'bg-slate-50/80 border-slate-200/90 shadow-sm'
-            }`}
-          >
-            {/* Amount & From Currency */}
-            <div className="md:col-span-5 space-y-2">
-              <label className={`block text-xs font-semibold uppercase tracking-wider ${isDarkTheme ? 'text-slate-300' : 'text-slate-600'}`}>
-                Сума
-              </label>
-              <div className="flex items-center gap-2">
-                <div className="relative w-full">
-                  <input
-                    type="number"
-                    value={currencyAmount}
-                    onChange={(e) => setCurrencyAmount(parseFloat(e.target.value) || 0)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        copyCurrencyToClipboard();
-                        (e.target as HTMLElement).blur();
-                      }
-                    }}
-                    className={`w-full font-mono font-bold text-lg px-4 py-3 ${currencyAmount !== 0 ? 'pr-9' : ''} rounded-2xl border outline-none transition-colors ${
-                      isDarkTheme
-                        ? 'bg-slate-900/90 text-white border-white/20 focus:border-amber-400 focus:ring-2 focus:ring-amber-500/30'
-                        : 'bg-white text-slate-900 border-slate-300 focus:border-amber-600 focus:ring-2 focus:ring-amber-500/20 shadow-inner'
-                    }`}
-                    placeholder="100"
-                  />
-                  {currencyAmount !== 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setCurrencyAmount(0)}
-                      className={`absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-full transition-all active:scale-95 ${
-                        isDarkTheme
-                          ? 'text-slate-400 hover:text-white hover:bg-white/20'
-                          : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200'
-                      }`}
-                      title="Очистити поле"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+          {/* Right Block (Input / Output with Two-Way Binding!) */}
+          <div className="md:col-span-5 p-3.5 rounded-2xl bg-white/[0.04] border border-white/10 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-400/20 transition-all space-y-1.5">
+            <div className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
+              Результат:
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                step="any"
+                value={isCurrencyMode ? currRight : unitRight}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (isCurrencyMode) {
+                    setCurrRight(val);
+                    recalculateCurrLeft(val, fromCurr, toCurr, rates, precision);
+                  } else {
+                    setUnitRight(val);
+                    recalculateUnitLeft(val, fromUnitObj, toUnitObj, precision);
+                  }
+                }}
+                className="w-full text-xl sm:text-2xl font-bold font-mono bg-transparent outline-none text-emerald-300 placeholder:text-slate-600"
+                placeholder="0"
+              />
+
+              {/* Selector */}
+              {isCurrencyMode ? (
                 <select
-                  value={fromCurrency}
-                  onChange={(e) => setFromCurrency(e.target.value)}
-                  className={`text-xs font-bold px-3 py-3 rounded-2xl border cursor-pointer outline-none min-w-[140px] transition-colors ${
-                    isDarkTheme
-                      ? 'bg-slate-900/90 text-white border-white/20 hover:border-white/40'
-                      : 'bg-white text-slate-800 border-slate-300 hover:border-slate-400'
-                  }`}
+                  value={toCurr}
+                  onChange={(e) => setToCurr(e.target.value)}
+                  className="bg-black/60 border border-white/20 rounded-xl px-2.5 py-1.5 text-xs font-bold text-emerald-200 outline-none cursor-pointer"
                 >
                   {SUPPORTED_CURRENCIES.map((c) => (
-                    <option key={c.code} value={c.code} className={isDarkTheme ? 'bg-slate-900 text-white' : 'bg-white text-slate-800'}>
+                    <option key={c.code} value={c.code} className="bg-slate-900 text-white">
                       {c.flag} {c.code} ({c.symbol})
                     </option>
                   ))}
                 </select>
-              </div>
-            </div>
-
-            {/* Swap Button */}
-            <div className="md:col-span-2 flex justify-center py-2 md:py-0">
-              <motion.button
-                type="button"
-                onClick={handleSwapCurrencies}
-                whileTap={{ scale: 0.92 }}
-                aria-label="Поміняти місцями початкову та цільову валюту"
-                className={`group p-3.5 rounded-2xl border transition-all ${
-                  isDarkTheme
-                    ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-400/40 text-amber-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
-                    : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-700 shadow-sm'
-                }`}
-                title="Поміняти місцями валюти (автоматичний перерахунок)"
-              >
-                <motion.div
-                  animate={{ rotate: currencySwapRotation }}
-                  transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-                  className="flex items-center justify-center"
-                >
-                  <ArrowLeftRight className="w-5 h-5" />
-                </motion.div>
-              </motion.button>
-            </div>
-
-            {/* Converted Amount & To Currency */}
-            <div className="md:col-span-5 space-y-2">
-              <label className={`block text-xs font-semibold uppercase tracking-wider flex items-center justify-between ${isDarkTheme ? 'text-slate-300' : 'text-slate-600'}`}>
-                <span>Результат</span>
-                <span className={`text-[10px] font-mono ${isDarkTheme ? 'text-amber-300' : 'text-amber-700 font-bold'}`}>
-                  1 {fromCurrency} = {((1 / fromRate) * toRate).toFixed(4)} {toCurrency}
-                </span>
-              </label>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-full font-mono font-bold text-lg px-4 py-3 rounded-2xl border flex items-center justify-between overflow-x-auto ${
-                    isDarkTheme
-                      ? 'bg-slate-950/90 text-amber-300 border-amber-500/30'
-                      : 'bg-amber-50 text-amber-900 border-amber-300 shadow-inner'
-                  }`}
-                >
-                  <span className="truncate">{formattedCurrencyResult}</span>
-                  <span className={`text-xs font-normal ml-2 ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {SUPPORTED_CURRENCIES.find((c) => c.code === toCurrency)?.symbol}
-                  </span>
-                </div>
+              ) : (
                 <select
-                  value={toCurrency}
-                  onChange={(e) => setToCurrency(e.target.value)}
-                  className={`text-xs font-bold px-3 py-3 rounded-2xl border cursor-pointer outline-none min-w-[140px] transition-colors ${
-                    isDarkTheme
-                      ? 'bg-slate-900/90 text-white border-white/20 hover:border-white/40'
-                      : 'bg-white text-slate-800 border-slate-300 hover:border-slate-400'
-                  }`}
+                  value={toUnitId}
+                  onChange={(e) => setToUnitId(e.target.value)}
+                  className="bg-black/60 border border-white/20 rounded-xl px-2.5 py-1.5 text-xs font-bold text-emerald-200 outline-none cursor-pointer"
                 >
-                  {SUPPORTED_CURRENCIES.map((c) => (
-                    <option key={c.code} value={c.code} className={isDarkTheme ? 'bg-slate-900 text-white' : 'bg-white text-slate-800'}>
-                      {c.flag} {c.code} ({c.symbol})
+                  {currentCategoryDef.units.map((u) => (
+                    <option key={u.id} value={u.id} className="bg-slate-900 text-white">
+                      {u.name} ({u.symbol})
                     </option>
                   ))}
                 </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Presets & Quick Conversion Rates Grid */}
-          <div className={`mt-5 pt-4 border-t space-y-4 ${isDarkTheme ? 'border-white/10' : 'border-slate-200'}`}>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className={`text-xs mr-1 ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>Швидка сума:</span>
-                {[10, 50, 100, 500, 1000].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setCurrencyAmount(preset)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all active:scale-95 ${
-                      isDarkTheme
-                        ? 'bg-white/10 hover:bg-white/20 text-slate-200 border-white/15'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                    }`}
-                  >
-                    {preset}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <button
-                  type="button"
-                  onClick={handleSaveCurrentAsPreset}
-                  className={`inline-flex items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 flex-1 sm:flex-initial ${
-                    isDarkTheme
-                      ? 'bg-blue-500/20 hover:bg-blue-500/30 text-sky-200 border-blue-400/30'
-                      : 'bg-blue-50 hover:bg-blue-100 text-blue-800 border-blue-300 shadow-xs'
-                  }`}
-                  title="Зберегти поточну валютну конвертацію у пресети"
-                >
-                  <BookmarkPlus className="w-3.5 h-3.5" />
-                  <span>+ Пресет</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={copyCurrencyToClipboard}
-                  className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 flex-1 sm:flex-initial ${
-                    isDarkTheme
-                      ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border-amber-400/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
-                      : 'bg-amber-600 hover:bg-amber-700 text-white border-amber-700 shadow-sm'
-                  }`}
-                >
-                  {copiedCurrency ? <Check className={`w-4 h-4 ${isDarkTheme ? 'text-emerald-400' : 'text-white'}`} /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedCurrency ? 'Скопійовано!' : 'Скопіювати обмін'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Popular Pairs Grid */}
-            <div>
-              <span className={`block text-[11px] font-bold uppercase mb-2 ${isDarkTheme ? 'text-slate-400' : 'text-slate-500'}`}>
-                Популярні пари валют (до UAH):
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { from: 'USD', to: 'UAH', flag: '🇺🇸' },
-                  { from: 'EUR', to: 'UAH', flag: '🇪🇺' },
-                  { from: 'PLN', to: 'UAH', flag: '🇵🇱' },
-                  { from: 'GBP', to: 'UAH', flag: '🇬🇧' },
-                ].map((pair) => {
-                  const rateVal = ((1 / (rates[pair.from] || 1)) * (rates[pair.to] || 1)).toFixed(2);
-                  return (
-                    <button
-                      key={pair.from}
-                      type="button"
-                      onClick={() => {
-                        setFromCurrency(pair.from);
-                        setToCurrency(pair.to);
-                      }}
-                      className={`flex items-center justify-between p-2.5 rounded-xl border transition-all text-left ${
-                        isDarkTheme
-                          ? 'bg-black/20 hover:bg-white/10 border-white/10'
-                          : 'bg-white hover:bg-amber-50/50 border-slate-200 shadow-sm'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm">{pair.flag}</span>
-                        <span className={`text-xs font-bold ${isDarkTheme ? 'text-white' : 'text-slate-800'}`}>1 {pair.from}</span>
-                      </div>
-                      <span className={`text-xs font-mono font-bold ${isDarkTheme ? 'text-amber-300' : 'text-amber-700'}`}>
-                        {rateVal} {pair.to}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              )}
             </div>
           </div>
         </div>
-      )}
+
+        {/* 5. MINIMALIST QUICK CHIPS & ACTIONS BAR */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-white/10">
+          {/* Quick Value Chips & Precision with Vertical Divider */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-0.5">
+              Швидко:
+            </span>
+
+            {/* Clear Button */}
+            <button
+              type="button"
+              onClick={() => handleQuickValue('clear')}
+              className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-400/30 transition-all active:scale-95 shadow-2xs"
+              title="Скинути в 0"
+            >
+              C
+            </button>
+
+            {[0.5, 1, 10, 100, 1000].map((num) => (
+              <button
+                key={num}
+                type="button"
+                onClick={() => handleQuickValue(num)}
+                className="px-2.5 py-1 rounded-lg text-xs font-mono font-medium bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/10 transition-all active:scale-95"
+              >
+                {num}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => handleQuickValue('max')}
+              className="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white border border-white/10 transition-all active:scale-95"
+            >
+              Max
+            </button>
+
+            {/* Vertical Divider */}
+            <div className="h-4 w-[1px] bg-white/15 mx-1 hidden xs:block" />
+
+            {/* Precision Selector */}
+            <div className="flex items-center gap-1 text-[11px] font-mono text-slate-400">
+              <span className="text-[10px] uppercase font-bold text-slate-500">Точність:</span>
+              {[2, 4, 6].map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPrecision(p)}
+                  className={`px-1.5 py-0.5 rounded transition-all ${
+                    precision === p ? 'bg-white/20 text-white font-bold' : 'hover:bg-white/10'
+                  }`}
+                >
+                  .{p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Action Buttons: Save Preset & Copy Result */}
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            {presetToast && (
+              <span className="text-xs font-bold text-amber-300 animate-in fade-in mr-1">
+                {presetToast}
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={handleSavePreset}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/5 hover:bg-white/10 border border-white/10 text-amber-300 hover:text-amber-200 transition-all active:scale-95"
+              title="Зберегти поточну комбінацію в пресети"
+            >
+              <BookmarkPlus className="w-3.5 h-3.5" />
+              <span>Зберегти в пресети</span>
+            </button>
+
+            {/* Neutral by default, green celebration on copy */}
+            <button
+              type="button"
+              onClick={handleCopy}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 border ${
+                copiedToast
+                  ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md scale-105'
+                  : 'bg-white/5 hover:bg-white/10 text-slate-200 border-white/10'
+              }`}
+            >
+              {copiedToast ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+              <span>{copiedToast ? 'Скопійовано!' : 'Копіювати'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

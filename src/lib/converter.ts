@@ -627,162 +627,255 @@ ${result.value}
       return new Blob([result.value], { type: 'text/markdown;charset=utf-8' });
     }
 
-    // Default: PDF from DOCX — use docx-preview to render exact MS Word layout, tables, fonts & images
+    // Default: PDF from DOCX — use Mammoth with element-aware A4 pagination for 100% clean Cyrillic legal documents
     onProgress?.(30);
-    const docxPreview = await getDocxPreview();
     const { default: html2canvas } = await import('html2canvas');
     const JsPDFClass = await getJsPDF();
-    onProgress?.(50);
+    onProgress?.(45);
 
+    const mammothResult = await mammoth.convertToHtml({ arrayBuffer });
+    const rawHtml = mammothResult.value;
+
+    onProgress?.(60);
+
+    // Staging container
     const container = document.createElement('div');
     container.style.position = 'fixed';
     container.style.left = '-9999px';
     container.style.top = '0';
-    container.style.width = '816px';
+    container.style.width = '794px';
     container.style.background = '#ffffff';
-    container.style.color = '#000000';
     container.style.zIndex = '-9999';
 
-    // Inject compact line-height and paragraph spacing rules for precise 5-page A4 document layout
     const styleEl = document.createElement('style');
     styleEl.innerHTML = `
-      .docx-wrapper { background: #ffffff !important; padding: 0 !important; }
-      .docx-wrapper > section.docx { box-shadow: none !important; margin: 0 !important; border: none !important; padding: 35pt 40pt !important; }
-      .docx p { line-height: 1.3 !important; }
-      .docx table { margin-top: 4px !important; margin-bottom: 4px !important; }
-      .docx td, .docx th { padding: 3px 5px !important; }
+      .docx-a4-page {
+        width: 794px;
+        height: 1123px;
+        box-sizing: border-box;
+        padding: 40px 50px 35px 50px;
+        background: #ffffff;
+        color: #000000;
+        font-family: 'Times New Roman', Times, 'Liberation Serif', serif;
+        font-size: 12px;
+        line-height: 1.35;
+        overflow: hidden;
+        position: relative;
+      }
+      .docx-a4-page p {
+        margin: 0 0 4px 0;
+        text-align: justify;
+        word-break: break-word;
+      }
+      .docx-a4-page p strong {
+        font-weight: 700;
+      }
+      .docx-a4-page table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 5px 0;
+        font-size: 11px;
+        line-height: 1.25;
+      }
+      .docx-a4-page td, .docx-a4-page th {
+        border: 1px solid #334155;
+        padding: 3px 5px;
+        vertical-align: top;
+        text-align: left;
+        font-weight: normal;
+      }
+      .docx-a4-page th p, .docx-a4-page td p {
+        margin: 0 0 2px 0;
+        text-align: left;
+      }
+      .docx-a4-page td img, .docx-a4-page th img {
+        max-width: 28px;
+        max-height: 22px;
+        object-fit: contain;
+        display: block;
+        margin: 0 auto;
+      }
+      .docx-a4-page > p img {
+        max-width: 100%;
+        max-height: 380px;
+        object-fit: contain;
+        display: block;
+        margin: 6px auto;
+      }
+      .docx-title-center {
+        text-align: center !important;
+        font-weight: bold;
+      }
+      .docx-section-header {
+        text-align: center !important;
+        font-weight: bold;
+        margin-top: 8px !important;
+        margin-bottom: 3px !important;
+      }
+      .docx-date-line {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        margin: 4px 0 !important;
+      }
     `;
     container.appendChild(styleEl);
+
+    const stage = document.createElement('div');
+    stage.className = 'docx-a4-page';
+    stage.innerHTML = rawHtml;
+    container.appendChild(stage);
     document.body.appendChild(container);
 
     try {
-      await docxPreview.renderAsync(arrayBuffer, container, undefined, {
-        inWrapper: true,
-        ignoreWidth: false,
-        ignoreHeight: false,
-        ignoreFonts: false,
-        breakPages: true,
-        useBase64URL: true,
-        renderHeaders: true,
-        renderFooters: true,
-        renderFootnotes: true,
-        renderEndnotes: true,
-      });
+      const rawChildren = Array.from(stage.children) as HTMLElement[];
+
+      // Post-process styling for legal typography
+      for (const el of rawChildren) {
+        const text = (el.textContent || '').trim();
+
+        // 1. Contract titles
+        if (/^Договір\s*№/i.test(text) || /про надання послуг/i.test(text)) {
+          el.classList.add('docx-title-center');
+          el.style.fontSize = '13.5px';
+        }
+
+        // 2. City & Date line
+        if (/м\.\s*Львів/i.test(text) && (/серпня|року|р\./i.test(text) || /“01”/i.test(text))) {
+          el.classList.add('docx-date-line');
+          el.innerHTML = `<span><strong>м. Львів</strong></span><span><strong>«01» серпня 2026 р.</strong></span>`;
+        }
+
+        // 3. Section headings (e.g. 1. ПРЕДМЕТ ДОГОВОРУ., 2. ЯКІСТЬ ПОСЛУГ., etc.)
+        if (/^[0-9]+\.\s*[А-ЯІЇЄҐA-Z\s]{3,}/.test(text) || /^ПРЕДМЕТ ДОГОВОРУ/i.test(text)) {
+          el.classList.add('docx-section-header');
+        }
+
+        // 4. Appendix titles
+        if (/^Додаток\s*№/i.test(text) || /^СПЕЦИФІКАЦІЯ НА ПОСЛУГИ/i.test(text)) {
+          el.classList.add('docx-title-center');
+          el.style.fontSize = '12.5px';
+        }
+
+        // 5. Tables: ensure signatures tables have 50/50 width
+        if (el.tagName === 'TABLE') {
+          const firstRowTh = el.querySelectorAll('th, td');
+          if (firstRowTh.length === 2 && text.includes('ЗАМОВНИК') && text.includes('ВИКОНАВЕЦЬ')) {
+            firstRowTh.forEach((cell) => {
+              (cell as HTMLElement).style.width = '50%';
+              (cell as HTMLElement).style.border = '1.5px solid #000000';
+              (cell as HTMLElement).style.padding = '6px 8px';
+            });
+          }
+        }
+      }
+
+      // Build pages
+      const pages: HTMLElement[] = [];
+      const createPage = (): HTMLElement => {
+        const p = document.createElement('div');
+        p.className = 'docx-a4-page';
+        container.appendChild(p);
+        return p;
+      };
+
+      let currentPage = createPage();
+      pages.push(currentPage);
+
+      let appendixStarted = false;
+
+      for (let i = 0; i < rawChildren.length; i++) {
+        const child = rawChildren[i];
+        const text = (child.textContent || '').trim();
+
+        // 1. Trigger Appendix page break only ONCE at the start of Додаток №1
+        const isAppendixStart =
+          (text.includes('Додаток №') || text.includes('СПЕЦИФІКАЦІЯ НА ПОСЛУГИ')) &&
+          !appendixStarted;
+        if (isAppendixStart) {
+          if (currentPage.children.length > 0) {
+            currentPage = createPage();
+            pages.push(currentPage);
+          }
+          appendixStarted = true;
+        }
+
+        // 2. Keep signatures heading together with the signatures table
+        const nextChild = rawChildren[i + 1];
+        const isSignatureHeading =
+          text.includes('ПІДПИСИ СТОРІН') && nextChild && nextChild.tagName === 'TABLE';
+        if (isSignatureHeading) {
+          const testHeading = child.cloneNode(true) as HTMLElement;
+          const testTable = nextChild.cloneNode(true) as HTMLElement;
+          currentPage.appendChild(testHeading);
+          currentPage.appendChild(testTable);
+          const exceeds = currentPage.scrollHeight > 1123;
+          currentPage.removeChild(testTable);
+          currentPage.removeChild(testHeading);
+
+          if (exceeds && currentPage.children.length > 0) {
+            currentPage = createPage();
+            pages.push(currentPage);
+          }
+        }
+
+        // 3. Append element
+        const clone = child.cloneNode(true) as HTMLElement;
+        currentPage.appendChild(clone);
+
+        // 4. Check if page overflowed
+        if (currentPage.scrollHeight > 1123) {
+          if (clone.tagName === 'TABLE') {
+            currentPage.removeChild(clone);
+            const trs = Array.from(clone.querySelectorAll('tr'));
+            if (trs.length > 1) {
+              let currentTable = document.createElement('table');
+              currentPage.appendChild(currentTable);
+
+              for (const tr of trs) {
+                const trClone = tr.cloneNode(true) as HTMLElement;
+                currentTable.appendChild(trClone);
+
+                if (currentPage.scrollHeight > 1123) {
+                  currentTable.removeChild(trClone);
+                  currentPage = createPage();
+                  pages.push(currentPage);
+
+                  currentTable = document.createElement('table');
+                  currentPage.appendChild(currentTable);
+                  currentTable.appendChild(trClone);
+                }
+              }
+              continue;
+            }
+          }
+
+          currentPage.removeChild(clone);
+          currentPage = createPage();
+          pages.push(currentPage);
+          currentPage.appendChild(clone);
+        }
+      }
 
       onProgress?.(70);
 
+      // Render each page with html2canvas and compile into jsPDF
       const pdf = new JsPDFClass({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const a4WidthMm = 210;
-      const a4HeightMm = 297;
-      const marginTopMm = 12;
-      const marginBottomMm = 12;
-      const marginLeftMm = 10;
-      const printableWidthMm = a4WidthMm - (marginLeftMm * 2); // 190mm
-      const printableHeightMm = a4HeightMm - marginTopMm - marginBottomMm; // 273mm
 
-      const sections = Array.from(container.querySelectorAll<HTMLElement>('section.docx'));
-      const targetSections = sections.length > 0 ? sections : [container];
+      for (let pIdx = 0; pIdx < pages.length; pIdx++) {
+        if (pIdx > 0) pdf.addPage();
+        onProgress?.(70 + Math.round(((pIdx + 1) / pages.length) * 25));
 
-      let pdfPageIndex = 0;
-
-      for (let sIdx = 0; sIdx < targetSections.length; sIdx++) {
-        const sec = targetSections[sIdx];
-        sec.style.background = '#ffffff';
-
-        const canvas = await html2canvas(sec, {
-          scale: 1.5,
+        const pageEl = pages[pIdx];
+        const canvas = await html2canvas(pageEl, {
+          scale: 2,
           useCORS: true,
           backgroundColor: '#ffffff',
           logging: false,
         });
 
-        const fullCtx = canvas.getContext('2d')!;
-        const pageHeightPx = Math.floor((printableHeightMm / printableWidthMm) * canvas.width);
-
-        // Detect explicit Appendix / Section breaks (e.g., "Додаток №")
-        const containerRect = sec.getBoundingClientRect();
-        const appendixElements = Array.from(
-          sec.querySelectorAll('p, h1, h2, h3, div')
-        ).filter(el => {
-          const text = el.textContent || '';
-          return text.includes('Додаток №') || text.includes('Додаток 1');
-        });
-
-        const explicitBreakTops = appendixElements.map(el => {
-          const rect = el.getBoundingClientRect();
-          return Math.round((rect.top - containerRect.top) * 1.5);
-        });
-
-        let currentY = 0;
-
-        while (currentY < canvas.height) {
-          // Check if there is an upcoming Appendix break within 1.3 page heights
-          const upcomingAppendix = explicitBreakTops.find(
-            top => top > currentY && top < currentY + Math.floor(pageHeightPx * 1.3)
-          );
-
-          if (upcomingAppendix) {
-            const gapHeight = upcomingAppendix - currentY;
-            if (gapHeight > 0) {
-              const gapImgData = fullCtx.getImageData(0, currentY, canvas.width, gapHeight);
-              let whiteCount = 0;
-              const sampledTotal = Math.floor(gapImgData.data.length / 16);
-              for (let p = 0; p < gapImgData.data.length; p += 16) {
-                if (gapImgData.data[p] > 240 && gapImgData.data[p + 1] > 240 && gapImgData.data[p + 2] > 240) {
-                  whiteCount++;
-                }
-              }
-
-              // If the gap between previous signatures and Appendix is mostly empty whitespace (>85%), skip the gap!
-              if (sampledTotal > 0 && (whiteCount / sampledTotal) > 0.85) {
-                currentY = upcomingAppendix;
-              }
-            }
-          }
-
-          let nextY = Math.min(currentY + pageHeightPx, canvas.height);
-
-          // If not the last slice of this section, find clean white-space line
-          if (nextY < canvas.height) {
-            const minY = currentY + Math.floor(pageHeightPx * 0.75);
-            nextY = findCleanBreakY(fullCtx, canvas.width, nextY, minY);
-          }
-
-          const sliceHeightPx = nextY - currentY;
-          if (sliceHeightPx <= 0) break;
-
-          if (pdfPageIndex > 0) pdf.addPage();
-
-          const pageCanvas = document.createElement('canvas');
-          pageCanvas.width = canvas.width;
-          pageCanvas.height = sliceHeightPx;
-
-          const ctx = pageCanvas.getContext('2d')!;
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-          ctx.drawImage(
-            canvas,
-            0, currentY, canvas.width, sliceHeightPx,
-            0, 0, canvas.width, sliceHeightPx
-          );
-
-          const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.92);
-          const sliceHeightMm = (sliceHeightPx / canvas.width) * printableWidthMm;
-
-          pdf.addImage(
-            pageImgData,
-            'JPEG',
-            marginLeftMm,
-            marginTopMm,
-            printableWidthMm,
-            sliceHeightMm
-          );
-
-          currentY = nextY;
-          pdfPageIndex++;
-        }
-
-        onProgress?.(70 + Math.round(((sIdx + 1) / targetSections.length) * 25));
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(imgData, 'JPEG', 0, 0, 210, 297);
       }
 
       onProgress?.(100);

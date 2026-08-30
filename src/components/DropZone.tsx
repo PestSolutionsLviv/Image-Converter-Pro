@@ -108,7 +108,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
     <div className="space-y-4">
       {/* Categories Selector Navigation Bar */}
       <div
-        className={`grid grid-cols-2 lg:grid-cols-4 items-stretch gap-2.5 sm:gap-3 p-2 sm:p-2.5 rounded-[26px] border backdrop-blur-3xl transition-all duration-300 ${
+        className={`grid grid-cols-2 lg:grid-cols-4 items-stretch gap-2 p-1.5 rounded-2xl border backdrop-blur-3xl transition-all duration-300 ${
           isDarkTheme
             ? 'bg-slate-900/70 border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.15)]'
             : 'bg-white/90 border-slate-200 shadow-md shadow-slate-200/50'
@@ -122,7 +122,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
               key={tab.id}
               type="button"
               onClick={() => onTabChange(tab.id)}
-              className={`relative flex items-center gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-[20px] text-left transition-all duration-300 active:scale-95 group ${
+              className={`relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all duration-300 active:scale-95 group ${
                 isActive
                   ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-sky-500 text-white border border-blue-300/50 shadow-[0_10px_28px_rgba(37,99,235,0.45),inset_0_1px_1px_rgba(255,255,255,0.5)] scale-[1.02]'
                   : isDarkTheme
@@ -131,7 +131,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
               }`}
             >
               <div
-                className={`p-2 rounded-xl flex-shrink-0 transition-transform duration-300 group-hover:scale-110 ${
+                className={`p-1.5 rounded-lg flex-shrink-0 transition-transform duration-300 group-hover:scale-105 ${
                   isActive
                     ? 'bg-white/20 text-white shadow-inner'
                     : isDarkTheme
@@ -139,10 +139,10 @@ export const DropZone: React.FC<DropZoneProps> = ({
                     : 'bg-blue-100 text-blue-600 border border-blue-200'
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-4 h-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-extrabold tracking-tight leading-tight truncate">
+                <div className="text-xs sm:text-sm font-bold tracking-tight leading-tight truncate">
                   {tab.label}
                 </div>
                 <div className="flex items-center gap-1 mt-0.5 overflow-hidden flex-wrap text-[11px]">
@@ -193,10 +193,10 @@ export const DropZone: React.FC<DropZoneProps> = ({
               : isDarkTheme
               ? hasFiles
                 ? 'border-white/10 bg-white/[0.05] hover:border-sky-300/50 hover:bg-white/[0.08] py-6 px-6 shadow-[0_15px_40px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.2)]'
-                : 'border-white/10 bg-white/[0.05] hover:border-sky-300/50 hover:bg-white/[0.08] py-10 px-6 shadow-[0_25px_60px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.2)]'
+                : 'border-white/10 bg-white/[0.05] hover:border-sky-300/50 hover:bg-white/[0.08] py-5 sm:py-6 px-5 shadow-[0_25px_60px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.2)]'
               : hasFiles
               ? 'border-slate-200/90 bg-white/80 hover:border-blue-400 hover:bg-white py-6 px-6 shadow-md shadow-slate-200/50'
-              : 'border-slate-200/90 bg-white/80 hover:border-blue-400 hover:bg-white py-10 px-6 shadow-lg shadow-slate-200/60'
+              : 'border-slate-200/90 bg-white/80 hover:border-blue-400 hover:bg-white py-5 sm:py-6 px-5 shadow-lg shadow-slate-200/60'
           }`}
         >
           <input
@@ -211,7 +211,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
           <div className="flex flex-col items-center justify-center text-center">
             {/* Animated Icon Circle */}
             <div
-              className={`w-16 h-16 sm:w-18 sm:h-18 rounded-[24px] flex items-center justify-center mb-4 transition-transform duration-300 group-hover:scale-105 shadow-lg ${
+              className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center mb-2.5 transition-transform duration-300 group-hover:scale-105 shadow-lg ${
                 isDragOver
                   ? 'bg-gradient-to-br from-blue-500 to-sky-400 text-white shadow-blue-500/40 border border-white/40'
                   : isDarkTheme
@@ -219,11 +219,11 @@ export const DropZone: React.FC<DropZoneProps> = ({
                   : 'bg-blue-50 text-blue-600 border border-blue-200 group-hover:bg-gradient-to-br group-hover:from-blue-500 group-hover:to-sky-500 group-hover:text-white group-hover:border-blue-300 shadow-blue-200/50'
               }`}
             >
-              <UploadCloud className="w-8 h-8 sm:w-9 sm:h-9" />
+              <UploadCloud className="w-6 h-6" />
             </div>
 
             <h3
-              className={`text-lg sm:text-2xl font-black mb-2 tracking-tight ${
+              className={`text-base sm:text-xl font-bold mb-1 tracking-tight ${
                 isDarkTheme ? 'text-white' : 'text-slate-900'
               }`}
             >
@@ -237,25 +237,24 @@ export const DropZone: React.FC<DropZoneProps> = ({
             </h3>
 
             <p
-              className={`text-xs sm:text-sm max-w-md mb-4 ${
+              className={`text-xs max-w-md mb-2 ${
                 isDarkTheme ? 'text-slate-300' : 'text-slate-600'
               }`}
             >
-              Натисніть для вибору файлів або вставте з буферу обміну (
-              <span
-                className={`font-mono text-xs px-2.5 py-0.5 rounded-full border ${
+              Натисніть для вибору або просто натисніть{' '}
+              <kbd
+                className={`font-mono text-xs px-2 py-0.5 rounded-lg border shadow-2xs ${
                   isDarkTheme
-                    ? 'bg-black/30 text-sky-300 border-white/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
-                    : 'bg-slate-100 text-blue-700 border-slate-300 font-bold'
+                    ? 'bg-white/10 text-slate-200 border-white/20'
+                    : 'bg-slate-100 text-slate-800 border-slate-300 font-bold'
                 }`}
               >
                 {pasteShortcut}
-              </span>
-              )
+              </kbd>
             </p>
 
-            {/* Formats Tags */}
-            <div className="flex flex-wrap items-center justify-center gap-1.5 mb-5">
+            {/* Formats Tags (Dimmer so buttons stand out) */}
+            <div className="flex flex-wrap items-center justify-center gap-1 mb-3.5">
               {(activeTab === 'photo'
                 ? ['HEIC', 'CR2', 'NEF', 'ARW', 'DNG', 'JPG', 'PNG', 'WEBP', 'PDF']
                 : activeTab === 'text'
@@ -266,10 +265,10 @@ export const DropZone: React.FC<DropZoneProps> = ({
               ).map((fmt) => (
                 <span
                   key={fmt}
-                  className={`text-[11px] font-bold px-3 py-1 rounded-full border transition-all ${
+                  className={`text-[10.5px] font-mono font-medium px-2 py-0.5 rounded-md border transition-all ${
                     isDarkTheme
-                      ? 'bg-blue-500/20 text-sky-200 border-blue-300/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]'
-                      : 'bg-blue-50 text-blue-800 border-blue-200 font-extrabold shadow-xs'
+                      ? 'bg-white/[0.04] text-slate-400 border-white/5'
+                      : 'bg-slate-100 text-slate-600 border-slate-200'
                   }`}
                 >
                   .{fmt.toLowerCase()}
@@ -285,7 +284,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-2 px-6 py-3 text-xs sm:text-sm font-bold text-white bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-95 rounded-full border border-blue-300/40 transition-all shadow-[0_10px_25px_-5px_rgba(37,99,235,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)]"
+                className="inline-flex items-center gap-2 px-5 py-2.5 text-xs sm:text-sm font-bold text-white bg-gradient-to-b from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 active:scale-95 rounded-full border border-blue-300/40 transition-all shadow-[0_10px_25px_-5px_rgba(37,99,235,0.5),inset_0_1px_1px_rgba(255,255,255,0.4)]"
               >
                 <FolderPlus className="w-4 h-4" />
                 Вибрати файли
@@ -295,7 +294,7 @@ export const DropZone: React.FC<DropZoneProps> = ({
                 type="button"
                 onClick={onAddDemoFiles}
                 disabled={isProcessingDemo}
-                className={`inline-flex items-center gap-2 px-5 py-3 text-xs sm:text-sm font-bold rounded-full border transition-all active:scale-95 disabled:opacity-50 ${
+                className={`inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-bold rounded-full border transition-all active:scale-95 disabled:opacity-50 ${
                   isDarkTheme
                     ? 'bg-white/5 hover:bg-white/10 border-white/10 text-slate-200 hover:text-white shadow-xs'
                     : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700 shadow-xs'

@@ -22,6 +22,12 @@ const BatchRenameModal = React.lazy(() => import('./components/BatchRenameModal'
 const ImageAdjustmentModal = React.lazy(() => import('./components/ImageAdjustmentModal').then(m => ({ default: m.ImageAdjustmentModal })));
 const KeyboardShortcutsModal = React.lazy(() => import('./components/KeyboardShortcutsModal').then(m => ({ default: m.KeyboardShortcutsModal })));
 const LegalModal = React.lazy(() => import('./components/LegalModal').then(m => ({ default: m.LegalModal })));
+const PdfWorkshopModal = React.lazy(() => import('./components/tools/PdfWorkshopModal').then(m => ({ default: m.PdfWorkshopModal })));
+const OcrExtractorModal = React.lazy(() => import('./components/tools/OcrExtractorModal').then(m => ({ default: m.OcrExtractorModal })));
+const ExifInspectorModal = React.lazy(() => import('./components/tools/ExifInspectorModal').then(m => ({ default: m.ExifInspectorModal })));
+const SvgOptimizerModal = React.lazy(() => import('./components/tools/SvgOptimizerModal').then(m => ({ default: m.SvgOptimizerModal })));
+const QrBarcodeStudioModal = React.lazy(() => import('./components/tools/QrBarcodeStudioModal').then(m => ({ default: m.QrBarcodeStudioModal })));
+const GifMakerModal = React.lazy(() => import('./components/tools/GifMakerModal').then(m => ({ default: m.GifMakerModal })));
 
 import {
   ConversionSettings,
@@ -42,7 +48,7 @@ import {
 import { createDemoPhotoFiles } from './lib/sampleFiles';
 import { getUserLocalData, saveUserLocalData } from './lib/userStorage';
 import { ProtectedContact } from './components/ProtectedContact';
-import { Image, Layers, Sparkles, Filter, RefreshCw, Type, Heart, ShieldCheck, Scale, ExternalLink, UploadCloud } from 'lucide-react';
+import { Image, Layers, Sparkles, Filter, RefreshCw, Type, Heart, ShieldCheck, Scale, ExternalLink, UploadCloud, Code2, FileText, Camera, Code, QrCode, Film, FileSearch, Wrench } from 'lucide-react';
 
 
 
@@ -61,6 +67,18 @@ export default function App() {
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [adjustingItem, setAdjustingItem] = useState<FileItem | null>(null);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [activeTool, setActiveTool] = useState<'pdf' | 'ocr' | 'exif' | 'svg' | 'qr' | 'gif' | null>(null);
+  const [toolInitialFile, setToolInitialFile] = useState<File | null>(null);
+  const handleToolDrop = (toolId: 'pdf' | 'ocr' | 'exif' | 'svg' | 'qr' | 'gif', e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const files = Array.from(e.dataTransfer.files || []);
+    if (files.length > 0) {
+      setToolInitialFile(files[0]);
+    }
+    setActiveTool(toolId);
+  };
+
   const [legalModalState, setLegalModalState] = useState<{ isOpen: boolean; tab: LegalTab }>({
     isOpen: false,
     tab: 'privacy',
@@ -388,6 +406,26 @@ export default function App() {
     setItems([]);
   }, [items]);
 
+  // Reset entire application to initial home state
+  const handleResetToHome = useCallback(() => {
+    items.forEach((item) => {
+      if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      if (item.outputUrl) URL.revokeObjectURL(item.outputUrl);
+    });
+    setItems([]);
+    setActiveCategoryTab('photo');
+    setActiveTool(null);
+    setToolInitialFile(null);
+    setCompareItem(null);
+    setAdjustingItem(null);
+    setIsRenameModalOpen(false);
+    setIsShortcutsModalOpen(false);
+    setLegalModalState({ isOpen: false, tab: 'privacy' });
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [items]);
+
   // Download ZIP
   const handleDownloadZip = useCallback(() => {
     downloadAllAsZip(items, `heic_converted_${Date.now()}.zip`);
@@ -507,8 +545,8 @@ export default function App() {
         return;
       }
 
-      // Ctrl + O or Cmd + O -> Open file picker
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'o' || e.key === 'O')) {
+      // Ctrl + O or Cmd + O (or 'U') -> Open file picker
+      if (((e.ctrlKey || e.metaKey) && (e.key === 'o' || e.key === 'O')) || e.key === 'u' || e.key === 'U') {
         e.preventDefault();
         const dropZoneInput = document.querySelector('input[type="file"]') as HTMLInputElement;
         if (dropZoneInput) {
@@ -517,7 +555,7 @@ export default function App() {
         return;
       }
 
-      // Shift + D -> Download ZIP
+      // Shift + D or Cmd + Shift + D -> Download ZIP
       if (e.shiftKey && (e.key === 'D' || e.key === 'd')) {
         e.preventDefault();
         if (items.some((i) => i.status === 'completed')) {
@@ -526,7 +564,7 @@ export default function App() {
         return;
       }
 
-      // Shift + R -> Batch rename modal
+      // Shift + R or Cmd + Shift + R -> Batch rename modal
       if (e.shiftKey && (e.key === 'R' || e.key === 'r')) {
         e.preventDefault();
         if (items.length > 0) {
@@ -536,8 +574,8 @@ export default function App() {
       }
 
       // Delete or Backspace -> Clear all items
-      if (e.key === 'Delete') {
-        if (items.length > 0) {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (items.length > 0 && !isRenameModalOpen && !adjustingItem && !compareItem) {
           e.preventDefault();
           handleClearAll();
         }
@@ -554,8 +592,8 @@ export default function App() {
         return;
       }
 
-      // '?' key -> Toggle keyboard shortcuts modal
-      if (e.key === '?') {
+      // '?' or Cmd/Ctrl + '/' -> Toggle keyboard shortcuts modal
+      if (e.key === '?' || ((e.ctrlKey || e.metaKey) && e.key === '/')) {
         e.preventDefault();
         setIsShortcutsModalOpen((prev) => !prev);
       }
@@ -606,6 +644,7 @@ export default function App() {
       {/* Top Header */}
       <div className="relative z-20">
         <Header
+          onResetToHome={handleResetToHome}
           onAddDemoFiles={handleAddDemoFiles}
           isProcessingDemo={isProcessingDemo}
           fileCount={items.length}
@@ -614,11 +653,12 @@ export default function App() {
           onToggleTheme={() => setIsDarkTheme((prev) => !prev)}
           activeTab={activeCategoryTab}
           onTabChange={setActiveCategoryTab}
+          onOpenTool={(t) => setActiveTool(t)}
         />
       </div>
 
       {/* Main Content Area */}
-      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="relative z-10 flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 space-y-3">
         
         {/* Upload Dropzone and Category Selector */}
         <DropZone
@@ -630,6 +670,129 @@ export default function App() {
           onTabChange={setActiveCategoryTab}
           isDarkTheme={isDarkTheme}
         />
+
+        {/* Open Source Tools Workshop (Compact & Non-wrapping) */}
+        {activeCategoryTab !== 'units' && (
+          <div className={`p-2.5 sm:p-3 rounded-2xl border backdrop-blur-2xl transition-all ${
+            isDarkTheme ? 'bg-white/[0.03] border-white/10 shadow-lg' : 'bg-white border-slate-200 shadow-md'
+          }`}>
+            <div className="flex items-center justify-between mb-2 px-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                  <Wrench className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Open Source Майстерня:</span>
+                </span>
+
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5 -mx-1 px-1">
+              <button
+                type="button"
+                onClick={() => { setToolInitialFile(null); setActiveTool('pdf'); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }} onDrop={(e) => handleToolDrop('pdf', e)}
+                className={`flex-1 min-w-[142px] shrink-0 p-2 rounded-xl border flex items-center gap-2 transition-all active:scale-95 text-left group ${
+                  activeCategoryTab === 'text'
+                    ? 'bg-white/[0.06] text-rose-300 border-rose-400/40 ring-1 ring-rose-400/20'
+                    : 'bg-white/[0.02] hover:bg-white/[0.05] text-slate-300 border-white/5 hover:border-white/15 opacity-80 hover:opacity-100'
+                }`}
+              >
+                <div className="w-7 h-7 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <FileText className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold truncate text-xs text-slate-100">PDF Майстерня</div>
+                  <div className="text-[9.5px] text-slate-400 truncate">Merge & Split</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setToolInitialFile(null); setActiveTool('ocr'); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }} onDrop={(e) => handleToolDrop('ocr', e)}
+                className={`flex-1 min-w-[142px] shrink-0 p-2 rounded-xl border flex items-center gap-2 transition-all active:scale-95 text-left group ${
+                  activeCategoryTab === 'photo' || activeCategoryTab === 'text'
+                    ? 'bg-white/[0.06] text-cyan-300 border-cyan-400/40 ring-1 ring-cyan-400/20'
+                    : 'bg-white/[0.02] hover:bg-white/[0.05] text-slate-300 border-white/5 hover:border-white/15 opacity-80 hover:opacity-100'
+                }`}
+              >
+                <div className="w-7 h-7 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <FileSearch className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold truncate text-xs text-slate-100">OCR Текст</div>
+                  <div className="text-[9.5px] text-slate-400 truncate">Скан в текст</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setToolInitialFile(null); setActiveTool('exif'); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }} onDrop={(e) => handleToolDrop('exif', e)}
+                className={`flex-1 min-w-[142px] shrink-0 p-2 rounded-xl border flex items-center gap-2 transition-all active:scale-95 text-left group ${
+                  activeCategoryTab === 'photo'
+                    ? 'bg-white/[0.06] text-amber-300 border-amber-400/40 ring-1 ring-amber-400/20'
+                    : 'bg-white/[0.02] hover:bg-white/[0.05] text-slate-300 border-white/5 hover:border-white/15 opacity-80 hover:opacity-100'
+                }`}
+              >
+                <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <Camera className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold truncate text-xs text-slate-100">EXIF & GPS</div>
+                  <div className="text-[9.5px] text-slate-400 truncate">Анонімізація</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setToolInitialFile(null); setActiveTool('svg'); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }} onDrop={(e) => handleToolDrop('svg', e)}
+                className={`flex-1 min-w-[142px] shrink-0 p-2 rounded-xl border flex items-center gap-2 transition-all active:scale-95 text-left group ${
+                  activeCategoryTab === 'photo'
+                    ? 'bg-white/[0.06] text-purple-300 border-purple-400/40 ring-1 ring-purple-400/20'
+                    : 'bg-white/[0.02] hover:bg-white/[0.05] text-slate-300 border-white/5 hover:border-white/15 opacity-80 hover:opacity-100'
+                }`}
+              >
+                <div className="w-7 h-7 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <Code className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold truncate text-xs text-slate-100">SVG Стиснення</div>
+                  <div className="text-[9.5px] text-slate-400 truncate">Мініфікація</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setToolInitialFile(null); setActiveTool('qr'); }}
+                className="flex-1 min-w-[142px] shrink-0 p-2 rounded-xl border flex items-center gap-2 transition-all active:scale-95 text-left group bg-white/[0.02] hover:bg-white/[0.05] text-slate-300 border-white/5 hover:border-white/15 opacity-80 hover:opacity-100"
+              >
+                <div className="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <QrCode className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold truncate text-xs text-slate-100">QR Студія</div>
+                  <div className="text-[9.5px] text-slate-400 truncate">SVG & PNG HD</div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setToolInitialFile(null); setActiveTool('gif'); }} onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }} onDrop={(e) => handleToolDrop('gif', e)}
+                className={`flex-1 min-w-[142px] shrink-0 p-2 rounded-xl border flex items-center gap-2 transition-all active:scale-95 text-left group ${
+                  activeCategoryTab === 'video'
+                    ? 'bg-white/[0.06] text-pink-300 border-pink-400/40 ring-1 ring-pink-400/20'
+                    : 'bg-white/[0.02] hover:bg-white/[0.05] text-slate-300 border-white/5 hover:border-white/15 opacity-80 hover:opacity-100'
+                }`}
+              >
+                <div className="w-7 h-7 rounded-lg bg-pink-500/20 text-pink-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <Film className="w-3.5 h-3.5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-bold truncate text-xs text-slate-100">Відео в GIF</div>
+                  <div className="text-[9.5px] text-slate-400 truncate">Без знаків</div>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Units and Currency Converter View */}
         {activeCategoryTab === 'units' && (
@@ -788,6 +951,50 @@ export default function App() {
             isDarkTheme={isDarkTheme}
           />
         )}
+
+        {/* 6 Open Source Tools Modals */}
+        {activeTool === 'pdf' && (
+          <PdfWorkshopModal
+            isOpen={true}
+            onClose={() => setActiveTool(null)}
+            isDarkTheme={isDarkTheme}
+          />
+        )}
+        {activeTool === 'ocr' && (
+          <OcrExtractorModal
+            isOpen={true}
+            onClose={() => setActiveTool(null)}
+            isDarkTheme={isDarkTheme}
+          />
+        )}
+        {activeTool === 'exif' && (
+          <ExifInspectorModal
+            isOpen={true}
+            onClose={() => setActiveTool(null)}
+            isDarkTheme={isDarkTheme}
+          />
+        )}
+        {activeTool === 'svg' && (
+          <SvgOptimizerModal
+            isOpen={true}
+            onClose={() => setActiveTool(null)}
+            isDarkTheme={isDarkTheme}
+          />
+        )}
+        {activeTool === 'qr' && (
+          <QrBarcodeStudioModal
+            isOpen={true}
+            onClose={() => setActiveTool(null)}
+            isDarkTheme={isDarkTheme}
+          />
+        )}
+        {activeTool === 'gif' && (
+          <GifMakerModal
+            isOpen={true}
+            onClose={() => setActiveTool(null)}
+            isDarkTheme={isDarkTheme}
+          />
+        )}
       </React.Suspense>
 
 
@@ -823,18 +1030,14 @@ export default function App() {
             />
             <span className={isDarkTheme ? 'text-slate-700' : 'text-slate-300'}>•</span>
             <a
-              href="https://www.buymeacoffee.com/pestsolutions"
+              href="https://ko-fi.com/tsaldan"
               target="_blank"
               rel="noopener noreferrer"
-              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full border transition-all active:scale-95 ${
-                isDarkTheme
-                  ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border-amber-400/30'
-                  : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-200 shadow-xs'
-              }`}
-              title="Підтримати проєкт (Buy Me a Coffee)"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1 text-xs font-semibold rounded-full border transition-all active:scale-95 bg-[#FF5E5B]/15 text-[#FF5E5B] border-[#FF5E5B]/30 hover:bg-[#FF5E5B]/25 shadow-xs"
+              title="Підтримати проєкт (Ko-fi ☕)"
             >
-              <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
-              <span>Buy Me a Coffee ☕</span>
+              <Heart className="w-3.5 h-3.5 fill-current" />
+              <span>Ko-fi ☕</span>
             </a>
           </div>
 
@@ -862,6 +1065,17 @@ export default function App() {
             >
               <Scale className="w-3.5 h-3.5 text-blue-400" />
               Умови використання
+            </button>
+            <span className={isDarkTheme ? 'text-slate-600' : 'text-slate-300'}>•</span>
+            <button
+              type="button"
+              onClick={() => setLegalModalState({ isOpen: true, tab: 'licenses' })}
+              className={`inline-flex items-center gap-1.5 font-semibold hover:underline transition-colors ${
+                isDarkTheme ? 'text-slate-300 hover:text-sky-300' : 'text-slate-600 hover:text-blue-600'
+              }`}
+            >
+              <Code2 className="w-3.5 h-3.5 text-purple-400" />
+              Ліцензії та Open Source
             </button>
           </div>
 
